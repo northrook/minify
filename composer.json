@@ -1,0 +1,28 @@
+{
+  "name": "northrook/minify",
+  "type": "library",
+  "description": "Custom Minification library.",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "Northrook\\": ""
+    }
+  },
+  "authors": [
+    {
+      "name": "Martin",
+      "email": "mn@northrook.com"
+    }
+  ],
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "require": {
+    "php": ">=8.2",
+    "northrook/core": "dev-main",
+    "northrook/support": "dev-main"
+  },
+  "require-dev": {
+    "phpstan/phpstan": " @stable",
+    "northrook/dev-env": "dev-main"
+  }
+}
