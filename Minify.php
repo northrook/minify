@@ -8,11 +8,9 @@ use Northrook\Core\Trait\PrintableClass;
 use Northrook\Logger\Log;
 use Northrook\Support\Num;
 use function Northrook\Core\Function\classBasename;
-use function trim, str_replace, preg_replace, array_intersect_key;
+use function trim, str_replace, preg_replace;
 
 /**
- * @internal
- *
  * @method $this trimDocblockComments()
  * @method $this trimSingleComments()
  * @method $this trimBlockComments()
@@ -21,6 +19,8 @@ use function trim, str_replace, preg_replace, array_intersect_key;
  * @method $this trimLatteComments()
  * @method $this trimTwigComments()
  * @method $this trimBladeComments()
+ *
+ * @author Martin Nielsen <mn@northrook.com>
  */
 abstract class Minify implements Printable
 {
