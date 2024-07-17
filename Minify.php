@@ -133,20 +133,20 @@ abstract class Minify implements Printable
         return ( new Minify\StringMinifier( $string ) )->trimWhitespace();
     }
 
-    public static function HTML( string $source ) : Minify {
-        return new Minify\HTML( $source );
+    public static function HTML( string $source, ?bool $logResults = null ) : Minify {
+        return new Minify\HTML( $source, $logResults );
     }
 
-    public static function CSS( string $source ) : Minify {
-        return new Minify\CSS( $source );
+    public static function CSS( string $source, ?bool $logResults = null ) : Minify {
+        return new Minify\CSS( $source, $logResults );
     }
 
-    public static function JS( string $source ) : Minify {
-        return new Minify\JS( $source );
+    public static function JS( string $source, ?bool $logResults = null ) : Minify {
+        return new Minify\JS( $source, $logResults );
     }
 
-    public static function Latte( string $source ) : Minify {
-        return new Minify\Latte( $source );
+    public static function Latte( string $source, ?bool $logResults = null ) : Minify {
+        return new Minify\Latte( $source, $logResults );
     }
 
 
@@ -161,8 +161,8 @@ abstract class Minify implements Printable
      *
      * @return Minify
      */
-    public static function SVG( string $string ) : Minify {
-        return new Minify\SVG( $string );
+    public static function SVG( string $string, ?bool $logResults = null ) : Minify {
+        return new Minify\SVG( $string, $logResults );
     }
 
     // Trim Functions ------
