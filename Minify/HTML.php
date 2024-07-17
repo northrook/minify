@@ -10,7 +10,7 @@ final class HTML extends Minify
 
     // private array $matchedElements = [];
 
-    protected function minify() : void {
+    protected function minifyString() : void {
         $this->trimHtmlComments()
             ->trimWhitespace()
             ->trimElementTagBrackets();

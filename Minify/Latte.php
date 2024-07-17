@@ -6,7 +6,7 @@ use Northrook\Minify;
 
 final class Latte extends Minify
 {
-    protected function minify() : void {
+    protected function minifyString() : void {
         $this->trimBlockComments()
              ->trimLatteComments()
              ->trimWhitespace();

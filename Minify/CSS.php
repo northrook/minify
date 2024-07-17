@@ -6,7 +6,7 @@ use Northrook\Minify;
 
 final class CSS extends Minify
 {
-    protected function minify() : void {
+    protected function minifyString() : void {
         $this->trimCssComments()
              ->trimWhitespace()
              ->removeLeadingZeroIntegers()

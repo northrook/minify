@@ -11,7 +11,7 @@ use Northrook\Minify;
 final class JS extends Minify
 {
 
-    protected function minify() : void {
+    protected function minifyString() : void {
         $this->trimBlockComments()
              ->trimSingleComments()
              ->trimWhitespace();

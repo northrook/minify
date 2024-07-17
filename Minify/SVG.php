@@ -23,7 +23,7 @@ final class SVG extends Minify
 {
     public bool $preserveXmlNamespace = false;
 
-    protected function minify() : void {
+    protected function minifyString() : void {
         $this->trimHtmlComments()
              ->trimWhitespace()
              ->trimXmlNamespace();

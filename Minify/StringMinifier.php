@@ -10,5 +10,5 @@ use Northrook\Minify;
 final class StringMinifier extends Minify
 {
 
-    protected function minify() : void {}
+    protected function minifyString() : void {}
 }

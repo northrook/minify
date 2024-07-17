@@ -55,11 +55,18 @@ abstract class Minify implements Printable
         $this->initialSizeKb = Num::formatBytes( $string, 'kB', returnFloat : true );
     }
 
-    abstract protected function minify() : void;
+    abstract protected function minifyString() : void;
+
+    final public function minify( bool $repeat = false ) : self {
+        if ( !isset( $this->minifiedSizeKb ) || $repeat ) {
+            $this->minifyString();
+            $this->minifiedSizeKb = Num::formatBytes( $this->string, 'kB', returnFloat : true );
+        }
+        return $this;
+    }
 
     public function __toString() : string {
         $this->minify();
-        $this->minifiedSizeKb = Num::formatBytes( $this->string, 'kB', returnFloat : true );
 
         if ( Env::isDebug() ) {
 
@@ -81,6 +88,10 @@ abstract class Minify implements Printable
     }
 
     public function report() : string {
+
+        if ( !isset( $this->minifiedSizeKb ) ) {
+            $this->minify();
+        }
 
         $differenceKb = $this->initialSizeKb - $this->minifiedSizeKb;
 
