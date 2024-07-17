@@ -50,9 +50,11 @@ abstract class Minify implements Printable
 
     final protected function __construct(
         protected string $string,
+        protected ?bool  $logResults = null,
     ) {
         $this->type          = classBasename( $this::class );
         $this->initialSizeKb = Num::formatBytes( $string, 'kB', returnFloat : true );
+        $this->logResults    ??= Env::isDebug();
     }
 
     abstract protected function minifyString() : void;
@@ -68,7 +70,7 @@ abstract class Minify implements Printable
     public function __toString() : string {
         $this->minify();
 
-        if ( Env::isDebug() ) {
+        if ( $this->logResults ) {
 
             $differenceKb      = $this->initialSizeKb - $this->minifiedSizeKb;
             $differencePercent = Num::percentDifference( $this->initialSizeKb, $this->minifiedSizeKb );
