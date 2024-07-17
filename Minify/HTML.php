@@ -3,7 +3,7 @@
 namespace Northrook\Minify;
 
 use Northrook\Minify;
-use function Northrook\Core\Function\replaceEach;
+use function Northrook\Core\replaceEach;
 
 final class HTML extends Minify
 {

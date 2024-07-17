@@ -7,7 +7,7 @@ use Northrook\Core\Interface\Printable;
 use Northrook\Core\Trait\PrintableClass;
 use Northrook\Logger\Log;
 use Northrook\Support\Num;
-use function Northrook\Core\Function\classBasename;
+use function Northrook\Core\classBasename;
 use function trim, str_replace, preg_replace;
 
 /**
@@ -144,8 +144,7 @@ abstract class Minify implements Printable
      * - Removes consecutive spaces
      * - Removes the XML namespace by default
      *
-     * @param string  $string                The string SVG string
-     * @param bool    $preserveXmlNamespace  Preserve the XML namespace
+     * @param string  $string  The string SVG string
      *
      * @return Minify
      */
