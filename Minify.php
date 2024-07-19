@@ -7,7 +7,7 @@ use Northrook\Core\Interface\Printable;
 use Northrook\Core\Trait\PrintableClass;
 use Northrook\Logger\Log;
 use Northrook\Support\Num;
-use function Northrook\Core\classBasename;
+use function Northrook\classBasename;
 use function trim, str_replace, preg_replace;
 
 /**

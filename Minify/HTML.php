@@ -3,7 +3,7 @@
 namespace Northrook\Minify;
 
 use Northrook\Minify;
-use function Northrook\Core\replaceEach;
+use function Northrook\replaceEach;
 
 final class HTML extends Minify
 {
@@ -12,8 +12,8 @@ final class HTML extends Minify
 
     protected function minifyString() : void {
         $this->trimHtmlComments()
-            ->trimWhitespace()
-            ->trimElementTagBrackets();
+             ->trimWhitespace()
+             ->trimElementTagBrackets();
     }
 
     /**
