@@ -36,7 +36,7 @@ abstract class Minify implements Printable
         'trimDocblockComments' => '#^\h*?/\*\*.*?\*/\R#ms',  // PHP block comments
         'trimSingleComments'   => '#^\h*?//.+?\R#m',         // Single line comments
         'trimBlockComments'    => '#^\h*?/\*.*?\*/\R#ms',    // Block comments
-        'trimCssComments'      => '#^\h*?/\*.*?\*/\R#ms',    // CSS comments
+        'trimCssComments'      => '#^\h*?/\*.*?\*/\R#ms',    // StylesheetMinifier comments
         'trimHtmlComments'     => '#^\h*?<!--.*?-->\R#ms',   // HTML comments
         'trimLatteComments'    => '#^\h*?{\*.*?\*}\R#ms',    // Latte comments
         'trimTwigComments'     => '/^\h*?{#.*?#}\R/ms',      // Twig comments
@@ -97,7 +97,7 @@ abstract class Minify implements Printable
 
         $differenceKb = $this->initialSizeKb - $this->minifiedSizeKb;
 
-        return "CSS string minified. {$this->initialSizeKb}KB to {$this->minifiedSizeKb}KB, saving {$differenceKb}KB.";
+        return "StylesheetMinifier string minified. {$this->initialSizeKb}KB to {$this->minifiedSizeKb}KB, saving {$differenceKb}KB.";
     }
 
     // Static Functions --------------------
@@ -134,15 +134,15 @@ abstract class Minify implements Printable
     }
 
     public static function HTML( string $source, ?bool $logResults = null ) : Minify {
-        return new Minify\HTML( $source, $logResults );
+        return new Minify\HtmlMinifier( $source, $logResults );
     }
 
     public static function CSS( string $source, ?bool $logResults = null ) : Minify {
-        return new Minify\CSS( $source, $logResults );
+        return new Minify\StylesheetMinifier( $source, $logResults );
     }
 
     public static function JS( string $source, ?bool $logResults = null ) : Minify {
-        return new Minify\JS( $source, $logResults );
+        return new Minify\JsMinifier( $source, $logResults );
     }
 
     public static function Latte( string $source, ?bool $logResults = null ) : Minify {
@@ -151,18 +151,18 @@ abstract class Minify implements Printable
 
 
     /**
-     * Optimize an SVG string
+     * Optimize an SvgMinifier string
      *
      * - Removes all whitespace, including tabs and newlines
      * - Removes consecutive spaces
      * - Removes the XML namespace by default
      *
-     * @param string  $string  The string SVG string
+     * @param string  $string  The string SvgMinifier string
      *
      * @return Minify
      */
     public static function SVG( string $string, ?bool $logResults = null ) : Minify {
-        return new Minify\SVG( $string, $logResults );
+        return new Minify\SvgMinifier( $string, $logResults );
     }
 
     // Trim Functions ------

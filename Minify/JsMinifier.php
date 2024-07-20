@@ -8,7 +8,7 @@ use Northrook\Minify;
  * Could very likely use JShrink
  * @link https://github.com/tedious/JShrink
  */
-final class JS extends Minify
+final class JsMinifier extends Minify
 {
 
     protected function minifyString() : void {

@@ -5,7 +5,7 @@ namespace Northrook\Minify;
 use Northrook\Minify;
 
 
-// Following TODOs should find a home in the SVG class, as they add to the SVG string
+// Following TODOs should find a home in the SvgMinifier class, as they add to the SvgMinifier string
 // The Trim class should only be used stripping unwanted substrings
 // They have just been put here because it is convenient for me right now
 
@@ -17,9 +17,9 @@ use Northrook\Minify;
 
 // TODO - Warn if baked-in colors are used, preferring 'currentColor' instead
 
-// TODO - Option to use CSS variables
+// TODO - Option to use StylesheetMinifier variables
 
-final class SVG extends Minify
+final class SvgMinifier extends Minify
 {
     public bool $preserveXmlNamespace = false;
 
@@ -29,7 +29,7 @@ final class SVG extends Minify
              ->trimXmlNamespace();
     }
 
-    private function trimXmlNamespace() : SVG {
+    private function trimXmlNamespace() : SvgMinifier {
         $this->string = preg_replace(
             pattern     : '#(<svg[^>]*?)\s+xmlns="[^"]*"#',
             replacement : '$1',

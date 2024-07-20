@@ -5,7 +5,7 @@ namespace Northrook\Minify;
 use Northrook\Minify;
 use function Northrook\replaceEach;
 
-final class HTML extends Minify
+final class HtmlMinifier extends Minify
 {
 
     // private array $matchedElements = [];
@@ -19,13 +19,13 @@ final class HTML extends Minify
     /**
      * Trim unnecessary whitespace around brackets
      */
-    private function trimElementTagBrackets() : HTML {
+    private function trimElementTagBrackets() : HtmlMinifier {
         $this->string = preg_replace( '#\s*(<|>|\/>)\s*#m', '$1', $this->string );
         return $this;
     }
 
     // TODO : In development
-    private function removeEmptyAttributes() : HTML {
+    private function removeEmptyAttributes() : HtmlMinifier {
         // foreach ( $this->matchHtmlOpeningElement() as $match ) {
         //     if ( count( $match ) === 1 ) {
         //         continue;
