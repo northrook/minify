@@ -146,7 +146,7 @@ abstract class Minify implements Printable
     }
 
     public static function Latte( string $source, ?bool $logResults = null ) : Minify {
-        return new Minify\Latte( $source, $logResults );
+        return new Minify\LatteMinifier( $source, $logResults );
     }
 
 

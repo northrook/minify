@@ -4,7 +4,7 @@ namespace Northrook\Minify;
 
 use Northrook\Minify;
 
-final class Latte extends Minify
+final class LatteMinifier extends Minify
 {
     protected function minifyString() : void {
         $this->trimBlockComments()
