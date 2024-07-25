@@ -7,7 +7,6 @@ use Northrook\Core\Interface\Printable;
 use Northrook\Core\Trait\PrintableClass;
 use Northrook\Logger\Log;
 use Northrook\Support\Num;
-use function Northrook\classBasename;
 use function trim, str_replace, preg_replace;
 
 /**
@@ -73,7 +72,7 @@ abstract class Minify implements Printable
         if ( $this->logResults ) {
 
             $differenceKb      = $this->initialSizeKb - $this->minifiedSizeKb;
-            $differencePercent = Num::percentDifference( $this->initialSizeKb, $this->minifiedSizeKb );
+            $differencePercent = numberPercentDifference( $this->initialSizeKb, $this->minifiedSizeKb );
 
             Log::Notice(
                 message : $this->type . ' string minified {percent}, from {from} to {to} saving {diff},',
@@ -157,7 +156,8 @@ abstract class Minify implements Printable
      * - Removes consecutive spaces
      * - Removes the XML namespace by default
      *
-     * @param string  $string  The string SvgMinifier string
+     * @param string     $string  The string SvgMinifier string
+     * @param null|bool  $logResults
      *
      * @return Minify
      */

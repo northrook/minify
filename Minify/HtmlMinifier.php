@@ -3,7 +3,6 @@
 namespace Northrook\Minify;
 
 use Northrook\Minify;
-use function Northrook\replaceEach;
 
 final class HtmlMinifier extends Minify
 {
@@ -20,7 +19,7 @@ final class HtmlMinifier extends Minify
      * Trim unnecessary whitespace around brackets
      */
     private function trimElementTagBrackets() : HtmlMinifier {
-        $this->string = preg_replace( '#\s*(<|>|\/>)\s*#m', '$1', $this->string );
+        $this->string = \preg_replace( '#\s*(<|>|\/>)\s*#m', '$1', $this->string );
         return $this;
     }
 
