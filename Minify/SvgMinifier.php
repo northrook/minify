@@ -7,7 +7,7 @@ use Northrook\Minify;
 
 // Following TODOs should find a home in the SvgMinifier class, as they add to the SvgMinifier string
 // The Trim class should only be used stripping unwanted substrings
-// They have just been put here because it is convenient for me right now
+// They have just been put here because it is convenient fo me right now
 
 // TODO - Automatically add height and width attributes based on viewBox
 

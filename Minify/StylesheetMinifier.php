@@ -9,7 +9,7 @@ final class StylesheetMinifier extends Minify
     protected function minifyString() : void {
         $this->trimCssComments()
              ->trimWhitespace()
-             ->removeLeadingZeroIntegers()
+             // ->removeLeadingZeroIntegers()
              ->removeEmptySelectors()
              ->compress();
     }
