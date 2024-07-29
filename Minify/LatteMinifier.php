@@ -9,7 +9,7 @@ final class LatteMinifier extends Minify
     protected function minifyString() : void {
         $this->trimBlockComments()
              ->trimLatteComments()
-             ->trimWhitespace();
+             ->trimWhitespace( removeNewlines : false );
     }
 
 }
