@@ -21,7 +21,7 @@ use function trim, str_replace, preg_replace;
  *
  * @author Martin Nielsen <mn@northrook.com>
  */
-abstract class Minify implements Printable
+class Minify implements Printable
 {
     use PrintableClass;
 
@@ -32,14 +32,14 @@ abstract class Minify implements Printable
      * - Includes the following line break
      */
     public const REGEX_PATTERN = [
-        'trimDocblockComments' => '#^\h*?/\*\*.*?\*/\R#ms',  // PHP block comments
-        'trimSingleComments'   => '#^\h*?//.+?\R#m',         // Single line comments
-        'trimBlockComments'    => '#^\h*?/\*.*?\*/\R#ms',    // Block comments
-        'trimCssComments'      => '#^\h*?/\*.*?\*/\R#ms',    // StylesheetMinifier comments
-        'trimHtmlComments'     => '#^\h*?<!--.*?-->\R#ms',   // HTML comments
-        'trimLatteComments'    => '#^\h*?{\*.*?\*}\R#ms',    // Latte comments
-        'trimTwigComments'     => '/^\h*?{#.*?#}\R/ms',      // Twig comments
-        'trimBladeComments'    => '#^\h*?{{--.*?--}}\R#ms',  // Blade comments
+        'trimDocblockComments' => '#^\h*?/\*\*.*?\*/\R*#ms',  // PHP block comments
+        'trimSingleComments'   => '#^\h*?//.+?\R*#m',         // Single line comments
+        'trimBlockComments'    => '#^\h*?/\*.*?\*/\R*#ms',    // Block comments
+        'trimCssComments'      => '#^\h*?/\*.*?\*/\R*#ms',    // StylesheetMinifier comments
+        'trimHtmlComments'     => '#^\h*?<!--.*?-->\R*#ms',   // HTML comments
+        'trimLatteComments'    => '#^\h*?{\*.*?\*}\R*#ms',    // Latte comments
+        'trimTwigComments'     => '/^\h*?{#.*?#}\R*/ms',      // Twig comments
+        'trimBladeComments'    => '#^\h*?{{--.*?--}}\R*#ms',  // Blade comments
     ];
 
     private float $initialSizeKb;
@@ -56,7 +56,9 @@ abstract class Minify implements Printable
         $this->logResults    ??= Env::isDebug();
     }
 
-    abstract protected function minifyString() : void;
+    protected function minifyString() : void {
+        $this->trimWhitespace( true, true );
+    }
 
     final public function minify( bool $repeat = false ) : self {
         if ( !isset( $this->minifiedSizeKb ) || $repeat ) {
