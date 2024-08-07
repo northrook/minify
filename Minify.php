@@ -33,9 +33,9 @@ class Minify implements Printable
      */
     public const REGEX_PATTERN = [
         'trimDocblockComments' => '#^\h*?/\*\*.*?\*/\R*#ms',  // PHP block comments
-        'trimSingleComments'   => '#^\h*?//.+?\R*#m',         // Single line comments
-        'trimBlockComments'    => '#^\h*?/\*.*?\*/\R*#ms',    // Block comments
-        'trimCssComments'      => '#^\h*?/\*.*?\*/\R*#ms',    // StylesheetMinifier comments
+        'trimSingleComments'   => '#\h*?//.+?\R*#m',         // Single line comments
+        'trimBlockComments'    => '#\h*?/\*.*?\*/\R*#ms',    // Block comments
+        'trimCssComments'      => '#\h*?/\*.*?\*/\R*#ms',    // StylesheetMinifier comments
         'trimHtmlComments'     => '#^\h*?<!--.*?-->\R*#ms',   // HTML comments
         'trimLatteComments'    => '#^\h*?{\*.*?\*}\R*#ms',    // Latte comments
         'trimTwigComments'     => '/^\h*?{#.*?#}\R*/ms',      // Twig comments
