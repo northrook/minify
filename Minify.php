@@ -2,9 +2,9 @@
 
 namespace Northrook;
 
-use Northrook\Core\Env;
-use Northrook\Core\Interface\Printable;
-use Northrook\Core\Trait\PrintableClass;
+use Northrook\Env;
+use Northrook\Interface\Printable;
+use Northrook\Trait\PrintableClass;
 use Northrook\Logger\Log;
 use Northrook\Support\Num;
 use function trim, str_replace, preg_replace;
