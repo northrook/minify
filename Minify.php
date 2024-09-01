@@ -9,6 +9,7 @@ use Northrook\Logger\Log;
 use Northrook\Support\Num;
 use function trim, str_replace, preg_replace;
 
+
 /**
  * @method $this trimDocblockComments()
  * @method $this trimSingleComments()
@@ -24,6 +25,7 @@ use function trim, str_replace, preg_replace;
 class Minify implements Printable
 {
     use PrintableClass;
+
 
     /**
      * Regex patterns for removing comments from a string.
@@ -50,17 +52,20 @@ class Minify implements Printable
     final protected function __construct(
         protected string $string,
         protected ?bool  $logResults = null,
-    ) {
+    )
+    {
         $this->type          = classBasename( $this::class );
         $this->initialSizeKb = Num::formatBytes( $string, 'kB', returnFloat : true );
         $this->logResults    ??= Env::isDebug();
     }
 
-    protected function minifyString() : void {
+    protected function minifyString() : void
+    {
         $this->trimWhitespace( true, true );
     }
 
-    final public function minify( bool $repeat = false ) : self {
+    final public function minify( bool $repeat = false ) : self
+    {
         if ( !isset( $this->minifiedSizeKb ) || $repeat ) {
             $this->minifyString();
             $this->minifiedSizeKb = Num::formatBytes( $this->string, 'kB', returnFloat : true );
@@ -68,30 +73,32 @@ class Minify implements Printable
         return $this;
     }
 
-    public function __toString() : string {
+    public function __toString() : string
+    {
         $this->minify();
 
         if ( $this->logResults ) {
-
             $differenceKb      = $this->initialSizeKb - $this->minifiedSizeKb;
             $differencePercent = numberPercentDifference( $this->initialSizeKb, $this->minifiedSizeKb );
 
-            Log::Notice(
-                message : $this->type . ' string minified {percent}, from {from} to {to} saving {diff},',
-                context : [
-                              'from'    => "{$this->initialSizeKb}KB",
-                              'to'      => "{$this->minifiedSizeKb}KB",
-                              'diff'    => "{$differenceKb}KB",
-                              'percent' => "{$differencePercent}%",
-                          ],
-            );
+            if ( $differenceKb >= 1 ) {
+                Log::Notice(
+                    message : $this->type . ' string minified {percent}, from {from} to {to} saving {diff},',
+                    context : [
+                                  'from'    => "{$this->initialSizeKb}KB",
+                                  'to'      => "{$this->minifiedSizeKb}KB",
+                                  'diff'    => "{$differenceKb}KB",
+                                  'percent' => "{$differencePercent}%",
+                              ],
+                );
+            }
         }
 
         return $this->string;
     }
 
-    public function report() : string {
-
+    public function report() : string
+    {
         if ( !isset( $this->minifiedSizeKb ) ) {
             $this->minify();
         }
@@ -108,8 +115,8 @@ class Minify implements Printable
         bool | array $removeComments = true,
         bool         $removeTabs = true,
         bool         $removeNewlines = true,
-    ) : ?string {
-
+    ) : ?string
+    {
         if ( !$string ) {
             return null;
         }
@@ -130,26 +137,30 @@ class Minify implements Printable
      *
      * @return string
      */
-    public static function squish( string $string ) : string {
+    public static function squish( string $string ) : string
+    {
         return ( new Minify\StringMinifier( $string ) )->trimWhitespace();
     }
 
-    public static function HTML( string $source, ?bool $logResults = null ) : Minify {
+    public static function HTML( string $source, ?bool $logResults = null ) : string
+    {
         return new Minify\HtmlMinifier( $source, $logResults );
     }
 
-    public static function CSS( string $source, ?bool $logResults = null ) : Minify {
+    public static function CSS( string $source, ?bool $logResults = null ) : Minify
+    {
         return new Minify\StylesheetMinifier( $source, $logResults );
     }
 
-    public static function JS( string $source, ?bool $logResults = null ) : Minify {
+    public static function JS( string $source, ?bool $logResults = null ) : Minify
+    {
         return new Minify\JsMinifier( $source, $logResults );
     }
 
-    public static function Latte( string $source, ?bool $logResults = null ) : Minify {
+    public static function Latte( string $source, ?bool $logResults = null ) : Minify
+    {
         return new Minify\LatteMinifier( $source, $logResults );
     }
-
 
     /**
      * Optimize an SvgMinifier string
@@ -163,7 +174,8 @@ class Minify implements Printable
      *
      * @return Minify
      */
-    public static function SVG( string $string, ?bool $logResults = null ) : Minify {
+    public static function SVG( string $string, ?bool $logResults = null ) : Minify
+    {
         return new Minify\SvgMinifier( $string, $logResults );
     }
 
@@ -184,8 +196,8 @@ class Minify implements Printable
     final protected function trimWhitespace(
         bool $removeTabs = true,
         bool $removeNewlines = true,
-    ) : self {
-
+    ) : self
+    {
         // Trim according to arguments
         $this->string = match ( true ) {
             // Remove all whitespace, including tabs and newlines
@@ -206,7 +218,8 @@ class Minify implements Printable
         return $this;
     }
 
-    public function trimComments() : self {
+    public function trimComments() : self
+    {
         foreach ( Minify::REGEX_PATTERN as $pattern ) {
             $this->string = preg_replace(
                 pattern     : $pattern,
@@ -217,7 +230,8 @@ class Minify implements Printable
         return $this;
     }
 
-    public function __call( string $method, array $arguments ) : self {
+    public function __call( string $method, array $arguments ) : self
+    {
         $pattern = Minify::REGEX_PATTERN[ $method ] ?? false;
 
         if ( $pattern ) {

@@ -12,7 +12,8 @@ final class HtmlMinifier extends Minify
     protected function minifyString() : void {
         $this->trimHtmlComments()
              ->trimWhitespace()
-             ->trimElementTagBrackets();
+            // ->trimElementTagBrackets()
+        ;
     }
 
     /**
