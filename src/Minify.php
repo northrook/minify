@@ -2,12 +2,14 @@
 
 namespace Northrook;
 
-use Northrook\Env;
 use Northrook\Interface\Printable;
-use Northrook\Trait\PrintableClass;
 use Northrook\Logger\Log;
+use Northrook\Minify\JavaScriptMinifier;
 use Northrook\Support\Num;
-use function trim, str_replace, preg_replace;
+use Northrook\Trait\PrintableClass;
+use function preg_replace;
+use function str_replace;
+use function trim;
 
 
 /**
@@ -152,9 +154,10 @@ class Minify implements Printable
         return new Minify\StylesheetMinifier( $source, $logResults );
     }
 
-    public static function JS( string $source, ?bool $logResults = null ) : Minify
+    public static function JS( string $source, ?bool $logResults = null ) : string
     {
-        return new Minify\JsMinifier( $source, $logResults );
+        return (string) ( new JavaScriptMinifier( $source ) );
+        // return JavaScriptMinifier::minify( $source );
     }
 
     public static function Latte( string $source, ?bool $logResults = null ) : Minify

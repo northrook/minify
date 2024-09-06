@@ -4,6 +4,7 @@ namespace Northrook\Minify;
 
 use Northrook\Minify;
 
+
 final class HtmlMinifier extends Minify
 {
 
@@ -20,6 +21,9 @@ final class HtmlMinifier extends Minify
      * Trim unnecessary whitespace around brackets
      */
     private function trimElementTagBrackets() : HtmlMinifier {
+        // \preg_replace(
+        /*    [ '#(^<\w+.*?>)\s+#', '#\s+(</\w+?>)$#', ], '$1', $rawLatteContent,*/
+        // )
         $this->string = \preg_replace( '#\s*(<|>|\/>)\s*#m', '$1', $this->string );
         return $this;
     }

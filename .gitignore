@@ -12,6 +12,8 @@
 .env
 *.lock
 /index.php
+/*.js
+/*.css
 /*.latte
 /templates/
 /tests/

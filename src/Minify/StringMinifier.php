@@ -4,6 +4,7 @@ namespace Northrook\Minify;
 
 use Northrook\Minify;
 
+
 /**
  * @internal
  */
