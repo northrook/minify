@@ -21,7 +21,8 @@
     "northrook/core": "dev-main",
     "northrook/support": "dev-main",
     "northrook/html": "dev-main",
-    "ext-dom": "*"
+    "ext-dom": "*",
+    "northrook/html-element": "dev-main"
   },
   "require-dev": {
     "phpstan/phpstan": " @stable",

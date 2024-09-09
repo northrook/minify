@@ -3,6 +3,7 @@
 namespace Northrook\Minify;
 
 use JetBrains\PhpStorm\Language;
+use Northrook\HTML\Element\Tag;
 use Northrook\HTML\HtmlNode;
 use Northrook\Interface\Printable;
 use Northrook\Minify;
@@ -92,6 +93,10 @@ final class HtmlMinifier implements Printable
                     $this->parseElementAttributes( $node );
                 }
 
+                if ( \in_array( $node->nodeName, [ 'b', 'i', 'strong', 'small' ] ) ) {
+                    $this->trimNodeText( $node );
+                }
+
                 $this->parseDomElements( $node->childNodes );
                 continue;
             }
@@ -100,6 +105,38 @@ final class HtmlMinifier implements Printable
             // }
 
         }
+    }
+
+    private function trimNodeText( \DOMNode $node ) : void
+    {
+        $childNodeCount = $node->childNodes->length - 1;
+
+        if ( $childNodeCount > 0 ) {
+            return;
+        }
+
+        foreach ( $node->childNodes as $index => $childNode ) {
+            if ( ! $childNode instanceof \DOMText ) {
+                continue;
+            }
+
+            if ( $childNodeCount === 0 ) {
+                $childNode->nodeValue = \trim( $childNode->nodeValue );
+                return;
+            }
+
+            if ( $index === \min( $childNodeCount ) ) {
+                $childNode->nodeValue = \ltrim( $childNode->nodeValue );
+            }
+
+            if ( $index === \max( $childNodeCount ) ) {
+                $childNode->nodeValue = \rtrim( $childNode->nodeValue );
+            }
+        }
+
+
+
+        dump( $node->textContent );
     }
 
     private function parseWhitespace( \DOMText $textNode ) : void
