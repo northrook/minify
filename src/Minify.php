@@ -28,23 +28,23 @@ class Minify implements Printable
 {
     use PrintableClass;
 
-
     /**
      * Regex patterns for removing comments from a string.
      *
      * - Matches from the start of the line
      * - Includes the following line break
      */
-    public const REGEX_PATTERN = [
-        'trimDocblockComments' => '#^\h*?/\*\*.*?\*/\R*#ms',  // PHP block comments
-        'trimSingleComments'   => '#\h*?//.+?\R*#m',         // Single line comments
-        'trimBlockComments'    => '#\h*?/\*.*?\*/\R*#ms',    // Block comments
-        'trimCssComments'      => '#\h*?/\*.*?\*/\R*#ms',    // StylesheetMinifier comments
-        'trimHtmlComments'     => '#^\h*?<!--.*?-->\R*#ms',   // HTML comments
-        'trimLatteComments'    => '#^\h*?{\*.*?\*}\R*#ms',    // Latte comments
-        'trimTwigComments'     => '/^\h*?{#.*?#}\R*/ms',      // Twig comments
-        'trimBladeComments'    => '#^\h*?{{--.*?--}}\R*#ms',  // Blade comments
-    ];
+    public const REGEX_PATTERN
+            = [
+                    'trimDocblockComments' => '#^\h*?/\*\*.*?\*/\R*#ms',  // PHP block comments
+                    'trimSingleComments'   => '#\h*?//.+?\R*#m',         // Single line comments
+                    'trimBlockComments'    => '#\h*?/\*.*?\*/\R*#ms',    // Block comments
+                    'trimCssComments'      => '#\h*?/\*.*?\*/\R*#ms',    // StylesheetMinifier comments
+                    'trimHtmlComments'     => '#^\h*?<!--.*?-->\R*#ms',   // HTML comments
+                    'trimLatteComments'    => '#^\h*?{\*.*?\*}\R*#ms',    // Latte comments
+                    'trimTwigComments'     => '/^\h*?{#.*?#}\R*/ms',      // Twig comments
+                    'trimBladeComments'    => '#^\h*?{{--.*?--}}\R*#ms',  // Blade comments
+            ];
 
     private float $initialSizeKb;
     private float $minifiedSizeKb;
@@ -52,8 +52,8 @@ class Minify implements Printable
     public readonly string $type;
 
     final protected function __construct(
-        protected string $string,
-        protected ?bool  $logResults = null,
+            protected string $string,
+            protected ?bool  $logResults = null,
     )
     {
         $this->type          = classBasename( $this::class );
@@ -85,13 +85,13 @@ class Minify implements Printable
 
             if ( $differenceKb >= 1 ) {
                 Log::Notice(
-                    message : $this->type . ' string minified {percent}, from {from} to {to} saving {diff},',
-                    context : [
-                                  'from'    => "{$this->initialSizeKb}KB",
-                                  'to'      => "{$this->minifiedSizeKb}KB",
-                                  'diff'    => "{$differenceKb}KB",
-                                  'percent' => "{$differencePercent}%",
-                              ],
+                        message : $this->type . ' string minified {percent}, from {from} to {to} saving {diff},',
+                        context : [
+                                          'from'    => "{$this->initialSizeKb}KB",
+                                          'to'      => "{$this->minifiedSizeKb}KB",
+                                          'diff'    => "{$differenceKb}KB",
+                                          'percent' => "{$differencePercent}%",
+                                  ],
                 );
             }
         }
@@ -113,10 +113,10 @@ class Minify implements Printable
     // Static Functions --------------------
 
     public static function string(
-        ?string      $string,
-        bool | array $removeComments = true,
-        bool         $removeTabs = true,
-        bool         $removeNewlines = true,
+            ?string      $string,
+            bool | array $removeComments = true,
+            bool         $removeTabs = true,
+            bool         $removeNewlines = true,
     ) : ?string
     {
         if ( !$string ) {
@@ -154,11 +154,9 @@ class Minify implements Printable
         return new Minify\StylesheetMinifier( $source, $logResults );
     }
 
-    public static function JS( string $source, ?bool $logResults = null ) : JavaScriptMinifier
+    public static function JS( string $source, ?bool $logResults = null ) : ?string
     {
-        // return  new JSMinifier($source  );
-        return  new JavaScriptMinifier( $source );
-        // return JavaScriptMinifier::minify( $source );
+        return $source ? ( new JavaScriptMinifier( $source ) )->minify() : $source;
     }
 
     public static function Latte( string $source, ?bool $logResults = null ) : Minify
@@ -198,8 +196,8 @@ class Minify implements Printable
      * @return $this
      */
     final protected function trimWhitespace(
-        bool $removeTabs = true,
-        bool $removeNewlines = true,
+            bool $removeTabs = true,
+            bool $removeNewlines = true,
     ) : self
     {
         // Trim according to arguments
@@ -226,9 +224,9 @@ class Minify implements Printable
     {
         foreach ( Minify::REGEX_PATTERN as $pattern ) {
             $this->string = preg_replace(
-                pattern     : $pattern,
-                replacement : '',
-                subject     : $this->string,
+                    pattern     : $pattern,
+                    replacement : '',
+                    subject     : $this->string,
             );
         }
         return $this;
@@ -240,9 +238,9 @@ class Minify implements Printable
 
         if ( $pattern ) {
             $this->string = preg_replace(
-                pattern     : $pattern,
-                replacement : '',
-                subject     : $this->string,
+                    pattern     : $pattern,
+                    replacement : '',
+                    subject     : $this->string,
             );
         }
 
