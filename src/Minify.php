@@ -4,13 +4,13 @@ namespace Northrook;
 
 use Northrook\Interface\Printable;
 use Northrook\Logger\Log;
+use Northrook\Minify\JavaScript\JSMinifier;
 use Northrook\Minify\JavaScriptMinifier;
 use Northrook\Support\Num;
 use Northrook\Trait\PrintableClass;
 use function preg_replace;
 use function str_replace;
 use function trim;
-
 
 /**
  * @method $this trimDocblockComments()
@@ -154,9 +154,10 @@ class Minify implements Printable
         return new Minify\StylesheetMinifier( $source, $logResults );
     }
 
-    public static function JS( string $source, ?bool $logResults = null ) : string
+    public static function JS( string $source, ?bool $logResults = null ) : JavaScriptMinifier
     {
-        return (string) ( new JavaScriptMinifier( $source ) );
+        // return  new JSMinifier($source  );
+        return  new JavaScriptMinifier( $source );
         // return JavaScriptMinifier::minify( $source );
     }
 

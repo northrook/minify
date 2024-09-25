@@ -17,6 +17,7 @@
 /*.latte
 /templates/
 /tests/
+!/src/Minify/JavaScriptShrinker.php
 
 # Node
 /node_modules/
