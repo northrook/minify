@@ -4,8 +4,21 @@ namespace Northrook\Minify;
 
 use Northrook\Clerk;
 use Northrook\Minify\JavaScript\MinifierTokens;
-use const Northrook\EMPTY_STRING;
 
+/**
+ * A stand-alone JavaScript minifier with {@see \Symfony\Component\HttpKernel\Profiler\Profiler} integration using {@see Clerk}.
+ *
+ * Heavily based on Matthias Mullie's work.
+ *
+ * @author    Martin Nielsen <mn@northrook.com>
+ * @copyright Copyright (c) 2024, Martin Nielsen. All rights reserved
+ *
+ * @author    Matthias Mullie <minify@mullie.eu>
+ * @author    Tijs Verkoyen <minify@verkoyen.eu>
+ * @copyright Copyright (c) 2012, Matthias Mullie. All rights reserved
+ *
+ * @license   MIT License
+ */
 final class JavaScriptMinifier implements \Stringable
 {
 
@@ -47,9 +60,7 @@ final class JavaScriptMinifier implements \Stringable
     {
         $this->profilerGroup = $this::class . ( $profilerTag ? "::$profilerTag" : null );
         Clerk::event( $this->profilerGroup, $this->profilerGroup );
-        foreach ( (array) $source as $data ) {
-            $this->add( $data );
-        }
+        \array_map( [ $this, 'add' ], (array) $source );
     }
 
     public function __toString() : string
@@ -65,7 +76,7 @@ final class JavaScriptMinifier implements \Stringable
      */
     public function minify() : string
     {
-        $content = EMPTY_STRING;
+        $content = '';
 
         /*
          * Let's first take out strings, comments and regular expressions.
