@@ -46,7 +46,7 @@ final class JavaScriptMinifier implements \Stringable
     public function __construct( string | array $source, ?string $profilerTag = null )
     {
         $this->profilerGroup = $this::class . ( $profilerTag ? "::$profilerTag" : null );
-        Clerk::event( $this::class, $this->profilerGroup );
+        Clerk::event( $this->profilerGroup, $this->profilerGroup );
         foreach ( (array) $source as $data ) {
             $this->add( $data );
         }
@@ -63,7 +63,7 @@ final class JavaScriptMinifier implements \Stringable
      *
      * @return string The minified data
      */
-    public function minify( bool $singleLine = false ) : string
+    public function minify() : string
     {
         $content = EMPTY_STRING;
 
@@ -103,17 +103,11 @@ final class JavaScriptMinifier implements \Stringable
          * Earlier, we extracted strings & regular expressions and replaced them
          * with placeholder text. This will restore them.
          */
+
         $content = $this->restoreExtractedData( $content );
-        //
-        // if ( $singleLine ) {
-        //     $content = \str_replace( "\n", "; ", $content );
-        //     // foreach ( $this::keywordsReserved as $keyword ) {
-        //     //     $content = \str_replace( "}; {$keyword}", "} {$keyword}", $content );
-        //     // }
-        //     $content = \str_replace( "}; while", "} while", $content );
-        // }
 
         Clerk::stopGroup( $this->profilerGroup );
+
         return $content;
     }
 
