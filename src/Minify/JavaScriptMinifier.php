@@ -2,6 +2,7 @@
 
 namespace Northrook\Minify;
 
+use Northrook\Clerk;
 use Northrook\Minify\JavaScript\MinifierTokens;
 use const Northrook\EMPTY_STRING;
 
@@ -9,6 +10,8 @@ final class JavaScriptMinifier implements \Stringable
 {
 
     use MinifierTokens;
+
+    private readonly string $profilerGroup;
 
     /**
      * The data to be minified.
@@ -38,11 +41,13 @@ final class JavaScriptMinifier implements \Stringable
     /**
      * Initialize the Minifier.
      *
-     * @param string  ...$source  [optional] Add one or more sources on initialization
+     * @param string|string[]  $source  [optional] Add one or more sources on initialization
      */
-    public function __construct( string ...$source )
+    public function __construct( string | array $source, ?string $profilerTag = null )
     {
-        foreach ( $source as $data ) {
+        $this->profilerGroup = $this::class . ( $profilerTag ? "::$profilerTag" : null );
+        Clerk::event( $this::class, $this->profilerGroup );
+        foreach ( (array) $source as $data ) {
             $this->add( $data );
         }
     }
@@ -108,6 +113,7 @@ final class JavaScriptMinifier implements \Stringable
         //     $content = \str_replace( "}; while", "} while", $content );
         // }
 
+        Clerk::stopGroup( $this->profilerGroup );
         return $content;
     }
 
@@ -178,6 +184,7 @@ final class JavaScriptMinifier implements \Stringable
      */
     final protected function restoreExtractedData( string $content ) : string
     {
+        Clerk::event( __METHOD__, $this->profilerGroup );
         // dump( $this->extracted );
         // print_r(  \array_slice( $this->extracted, 592, 7) );
         if ( !$this->extracted ) {
@@ -189,6 +196,7 @@ final class JavaScriptMinifier implements \Stringable
 
         $this->extracted = [];
 
+        Clerk::stop( __METHOD__ );
         return $content;
     }
 
@@ -432,6 +440,7 @@ final class JavaScriptMinifier implements \Stringable
      */
     final protected function extractStrings( string $chars = '\'"', string $placeholderPrefix = '' ) : void
     {
+        Clerk::event( __METHOD__, $this->profilerGroup );
         // PHP only supports $this inside anonymous functions since 5.4
         $callback = function( $match ) use ( $placeholderPrefix )
         {
@@ -472,6 +481,8 @@ final class JavaScriptMinifier implements \Stringable
          * escaped (times 2)
          */
         $this->registerPattern( '/([' . $chars . '])(.*?(?<!\\\\)(\\\\\\\\)*+)\\1/s', $callback );
+
+        Clerk::stop( __METHOD__ );
     }
 
     /**
@@ -493,6 +504,7 @@ final class JavaScriptMinifier implements \Stringable
      */
     protected function extractRegex() : void
     {
+        Clerk::event( __METHOD__, $this->profilerGroup );
         // PHP only supports $this inside anonymous functions since 5.4
         $callback = function( $match )
         {
@@ -563,6 +575,8 @@ final class JavaScriptMinifier implements \Stringable
         $operators += $this->getOperatorsForRegex( $this::keywordsReserved );
         $after     = '(?=\s*\n\s*(' . implode( '|', $operators ) . '))';
         $this->registerPattern( '/' . $pattern . $after . '/', $callback );
+
+        Clerk::stop( __METHOD__ );
     }
 
     /**
@@ -647,10 +661,12 @@ final class JavaScriptMinifier implements \Stringable
      */
     protected function stripComments() : void
     {
+        Clerk::event( __METHOD__, $this->profilerGroup );
         $this->stripMultilineComments();
 
         // single-line comments
         $this->registerPattern( '/\/\/.*$/m' );
+        Clerk::stop( __METHOD__ );
     }
 
     /**

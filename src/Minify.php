@@ -154,9 +154,15 @@ class Minify implements Printable
         return new Minify\StylesheetMinifier( $source, $logResults );
     }
 
-    public static function JS( string $source, ?bool $logResults = null ) : ?string
+    /**
+     * @param string   $source
+     * @param ?string  $profilerTag
+     *
+     * @return null|string
+     */
+    public static function JS( string $source, ?string $profilerTag = null ) : ?string
     {
-        return $source ? ( new JavaScriptMinifier( $source ) )->minify() : $source;
+        return $source ? ( new JavaScriptMinifier( $source, $profilerTag ) )->minify() : $source;
     }
 
     public static function Latte( string $source, ?bool $logResults = null ) : Minify
@@ -246,86 +252,4 @@ class Minify implements Printable
 
         return $this;
     }
-
-    // final protected function removeAllComments() : Minify {
-    //
-    //     return $this;
-    // }
-    //
-    // final protected function removeDocblockComments() : Minify {
-    //
-    //     $this->string = preg_replace(
-    //         pattern     : Minify::REGEX_PATTERN[ 'docblock' ],
-    //         replacement : '',
-    //         subject     : $this->string,
-    //     );
-    //     return $this;
-    // }
-    //
-    // final protected function removeSingleComments() : Minify {
-    //
-    //     $this->string = preg_replace(
-    //         pattern     : Minify::REGEX_PATTERN[ 'single' ],
-    //         replacement : '',
-    //         subject     : $this->string,
-    //     );
-    //     return $this;
-    // }
-    //
-    // final protected function removeBlockComments() : Minify {
-    //
-    //     $this->string = preg_replace(
-    //         pattern     : Minify::REGEX_PATTERN[ 'block' ],
-    //         replacement : '',
-    //         subject     : $this->string,
-    //     );
-    //     return $this;
-    // }
-    //
-    // final protected function removeCssComments() : Minify {
-    //
-    //     $this->string = preg_replace(
-    //         pattern     : Minify::REGEX_PATTERN[ 'css' ],
-    //         replacement : '',
-    //         subject     : $this->string,
-    //     );
-    //     return $this;
-    // }
-    //
-    // final protected function removeHtmlComments() : Minify {
-    //
-    //     $this->string = preg_replace(
-    //         pattern     : Minify::REGEX_PATTERN[ 'html' ],
-    //         replacement : '',
-    //         subject     : $this->string,
-    //     );
-    //     return $this;
-    // }
-    //
-    // final protected function removeLatteComments() : Minify {
-    //     $this->string = preg_replace(
-    //         pattern     : Minify::REGEX_PATTERN[ 'latte' ],
-    //         replacement : '',
-    //         subject     : $this->string,
-    //     );
-    //     return $this;
-    // }
-    //
-    // final protected function removeTwigComments() : Minify {
-    //     $this->string = preg_replace(
-    //         pattern     : Minify::REGEX_PATTERN[ 'twig' ],
-    //         replacement : '',
-    //         subject     : $this->string,
-    //     );
-    //     return $this;
-    // }
-    //
-    // final protected function removeBladeComments() : Minify {
-    //     $this->string = preg_replace(
-    //         pattern     : Minify::REGEX_PATTERN[ 'blade' ],
-    //         replacement : '',
-    //         subject     : $this->string,
-    //     );
-    //     return $this;
-    // }
 }
