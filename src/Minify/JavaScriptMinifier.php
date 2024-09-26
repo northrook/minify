@@ -4,6 +4,7 @@ namespace Northrook\Minify;
 
 use Northrook\Clerk;
 use Northrook\Minify\JavaScript\MinifierTokens;
+use function Northrook\{stringStartsWith, stringEndsWith};
 
 /**
  * A stand-alone JavaScript minifier with {@see \Symfony\Component\HttpKernel\Profiler\Profiler} integration using {@see Clerk}.
@@ -117,9 +118,71 @@ final class JavaScriptMinifier implements \Stringable
 
         $content = $this->restoreExtractedData( $content );
 
+        $content = $this->collapseSimpleLines( $content );
+
         Clerk::stopGroup( $this->profilerGroup );
 
         return $content;
+    }
+
+    private function collapseSimpleLines( string $content ) : string
+    {
+        $string = '';
+
+        $lines = \explode( "\n", $content );
+
+        foreach ( $lines as $index => $line ) {
+            $nextLine = $lines[ $index + 1 ] ?? false;
+
+            if ( stringStartsWith( $nextLine, [ "'use strict'", "const", 'var', 'let' ] ) ) {
+                $string .= "$line;";
+                continue;
+            }
+
+
+            if ( (bool) preg_match( '#^\w+?\..{2}#m', $line ) ) {
+                // dump( $line );
+                $string .= "$line;";
+                continue;
+            }
+
+            if ( (bool) preg_match( '#^\w+?=.{2}#m', $line ) ) {
+                $string .= "$line;";
+                continue;
+            }
+
+            if ( stringEndsWith( $line, [ ']', ')', 'return' ] ) ) {
+                $string .= "$line; ";
+                continue;
+            }
+            if (
+                    \str_ends_with( $line, "}" )
+                    &&
+                    !stringStartsWith( $nextLine, 'while' )
+            ) {
+                $string .= "$line;";
+                continue;
+            }
+
+            if (
+                    (bool) preg_match( '#^[\w\s\.=]+?$#m', $line )
+                    &&
+                    !stringStartsWith( $nextLine, [ "{", '(' ] )
+            ) {
+                // dump( $nextLine );
+                $string .= "$line;";
+                continue;
+            }
+
+            if ( stringStartsWith( $nextLine, [ "return", "if" ] ) ) {
+                $string .= "$line;";
+                continue;
+            }
+
+            $string .= "$line\n";
+        }
+
+        return $string;
     }
 
     /**
