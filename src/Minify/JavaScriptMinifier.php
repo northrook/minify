@@ -4,7 +4,8 @@ namespace Northrook\Minify;
 
 use Northrook\Clerk;
 use Northrook\Minify\JavaScript\MinifierTokens;
-use function Northrook\{stringStartsWith, stringEndsWith};
+use function String\endsWith;
+use function String\startsWith;
 
 /**
  * A stand-alone JavaScript minifier with {@see \Symfony\Component\HttpKernel\Profiler\Profiler} integration using {@see Clerk}.
@@ -134,11 +135,10 @@ final class JavaScriptMinifier implements \Stringable
         foreach ( $lines as $index => $line ) {
             $nextLine = $lines[ $index + 1 ] ?? false;
 
-            if ( stringStartsWith( $nextLine, [ "'use strict'", "const", 'var', 'let' ] ) ) {
+            if ( startsWith( $nextLine, [ "'use strict'", "const", 'var', 'let' ] ) ) {
                 $string .= "$line;";
                 continue;
             }
-
 
             if ( (bool) preg_match( '#^\w+?\..{2}#m', $line ) ) {
                 // dump( $line );
@@ -151,30 +151,30 @@ final class JavaScriptMinifier implements \Stringable
                 continue;
             }
 
-            if ( stringEndsWith( $line, [ ']', ')', 'return' ] ) ) {
+            if ( endsWith( $line, [ ']', ')', 'return' ] ) ) {
                 $string .= "$line; ";
                 continue;
             }
             if (
                     \str_ends_with( $line, "}" )
                     &&
-                    !stringStartsWith( $nextLine, 'while' )
+                    !startsWith( $nextLine, 'while' )
             ) {
                 $string .= "$line;";
                 continue;
             }
 
             if (
-                    (bool) preg_match( '#^[\w\s\.=]+?$#m', $line )
+                    (bool) \preg_match( '#^[\w\s\.=]+?$#m', $line )
                     &&
-                    !stringStartsWith( $nextLine, [ "{", '(' ] )
+                    !startsWith( $nextLine, [ "{", '(' ] )
             ) {
                 // dump( $nextLine );
                 $string .= "$line;";
                 continue;
             }
 
-            if ( stringStartsWith( $nextLine, [ "return", "if" ] ) ) {
+            if ( startsWith( $nextLine, [ "return", "if" ] ) ) {
                 $string .= "$line;";
                 continue;
             }
@@ -591,7 +591,8 @@ final class JavaScriptMinifier implements \Stringable
         // then also ignore bare `/` inside `[]`, where they don't need to be
         // escaped: anything inside `[]` can be ignored safely
         $pattern
-                = '\\/(?!\*)(?:[^\\[\\/\\\\\n\r]++|(?:\\\\.)++|(?:\\[(?:[^\\]\\\\\n\r]++|(?:\\\\.)++)++\\])++)++\\/[gimuy]*';
+                =
+                '\\/(?!\*)(?:[^\\[\\/\\\\\n\r]++|(?:\\\\.)++|(?:\\[(?:[^\\]\\\\\n\r]++|(?:\\\\.)++)++\\])++)++\\/[gimuy]*';
 
         // a regular expression can only be followed by a few operators or some
         // of the RegExp methods (a `\` followed by a variable or value is
@@ -898,9 +899,6 @@ final class JavaScriptMinifier implements \Stringable
          * The limitation is that it will not allow closures in more than one
          * of the three parts for a specific for() case.
          * REGEX throwing catastrophic backtracking: $content = preg_replace('/(for\([^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*;[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*;[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*\));(\}|$)/s', '\\1;;\\8', $content);
-         */
-        /**
-         * @noinspectionAll
          */
         $content = \preg_replace(
                 '/(for\((?:[^;\{]*|[^;\{]*function[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*);[^;\{]*;[^;\{]*\));(\}|$)/',

@@ -8,14 +8,12 @@ use Northrook\HTML\HtmlNode;
 use Northrook\Interface\Printable;
 use Northrook\Minify;
 use Northrook\Trait\PrintableClass;
-use function Northrook\replaceEach;
-use const Northrook\EMPTY_STRING;
-
+use function String\replaceEach;
+use const String\EMPTY_STRING;
 
 final class HtmlMinifier implements Printable
 {
     use PrintableClass;
-
 
     private string $string;
 
@@ -48,8 +46,8 @@ final class HtmlMinifier implements Printable
     protected string | bool | null $previous;
 
     public function __construct(
-        #[Language( 'HTML' )]
-        string $string,
+            #[Language( 'HTML' )]
+            string $string,
     )
     {
         $string = \preg_replace( '#^\h*?<!--.*?-->\R*#ms', '', $string );
@@ -116,7 +114,7 @@ final class HtmlMinifier implements Printable
         }
 
         foreach ( $node->childNodes as $index => $childNode ) {
-            if ( ! $childNode instanceof \DOMText ) {
+            if ( !$childNode instanceof \DOMText ) {
                 continue;
             }
 
@@ -134,8 +132,6 @@ final class HtmlMinifier implements Printable
             }
         }
 
-
-
         dump( $node->textContent );
     }
 
@@ -146,8 +142,8 @@ final class HtmlMinifier implements Printable
             return;
         }
         dump(
-            $textNode->previousSibling?->nodeValue,
-            $textNode->nextSibling?->nodeValue,
+                $textNode->previousSibling?->nodeValue,
+                $textNode->nextSibling?->nodeValue,
         );
     }
 

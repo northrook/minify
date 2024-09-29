@@ -4,12 +4,13 @@ namespace Northrook;
 
 use Northrook\Interface\Printable;
 use Northrook\Logger\Log;
-use Northrook\Minify\JavaScript\JSMinifier;
 use Northrook\Minify\JavaScriptMinifier;
 use Northrook\Support\Num;
 use Northrook\Trait\PrintableClass;
+use function Number\percentDifference;
 use function preg_replace;
 use function str_replace;
+use function Support\classBasename;
 use function trim;
 
 /**
@@ -34,7 +35,7 @@ class Minify implements Printable
      * - Matches from the start of the line
      * - Includes the following line break
      */
-    public const REGEX_PATTERN
+    public const array REGEX_PATTERN
             = [
                     'trimDocblockComments' => '#^\h*?/\*\*.*?\*/\R*#ms',  // PHP block comments
                     'trimSingleComments'   => '#\h*?//.+?\R*#m',         // Single line comments
@@ -81,7 +82,7 @@ class Minify implements Printable
 
         if ( $this->logResults ) {
             $differenceKb      = $this->initialSizeKb - $this->minifiedSizeKb;
-            $differencePercent = numberPercentDifference( $this->initialSizeKb, $this->minifiedSizeKb );
+            $differencePercent = percentDifference( $this->initialSizeKb, $this->minifiedSizeKb );
 
             if ( $differenceKb >= 1 ) {
                 Log::Notice(
@@ -146,7 +147,7 @@ class Minify implements Printable
 
     public static function HTML( string $source, ?bool $logResults = null ) : string
     {
-        return new Minify\HtmlMinifier( $source, $logResults );
+        return (string) new Minify\HtmlMinifier( $source, $logResults );
     }
 
     public static function CSS( string $source, ?bool $logResults = null ) : Minify
