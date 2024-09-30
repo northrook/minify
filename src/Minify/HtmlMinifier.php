@@ -8,8 +8,7 @@ use Northrook\HTML\HtmlNode;
 use Northrook\Interface\Printable;
 use Northrook\Minify;
 use Northrook\Trait\PrintableClass;
-use function String\replaceEach;
-use const String\EMPTY_STRING;
+use const Support\EMPTY_STRING;
 
 final class HtmlMinifier implements Printable
 {

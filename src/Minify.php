@@ -5,12 +5,11 @@ namespace Northrook;
 use Northrook\Interface\Printable;
 use Northrook\Logger\Log;
 use Northrook\Minify\JavaScriptMinifier;
-use Northrook\Support\Num;
+use Support\Num;
 use Northrook\Trait\PrintableClass;
-use function Number\percentDifference;
+use function Support\classBasename;
 use function preg_replace;
 use function str_replace;
-use function Support\classBasename;
 use function trim;
 
 /**
@@ -58,7 +57,7 @@ class Minify implements Printable
     )
     {
         $this->type          = classBasename( $this::class );
-        $this->initialSizeKb = Num::formatBytes( $string, 'kB', returnFloat : true );
+        $this->initialSizeKb =(float) Num::byteSize( $string );
         $this->logResults    ??= Env::isDebug();
     }
 
@@ -71,7 +70,7 @@ class Minify implements Printable
     {
         if ( !isset( $this->minifiedSizeKb ) || $repeat ) {
             $this->minifyString();
-            $this->minifiedSizeKb = Num::formatBytes( $this->string, 'kB', returnFloat : true );
+            $this->minifiedSizeKb = (float) Num::byteSize( $this->string );
         }
         return $this;
     }
@@ -82,7 +81,7 @@ class Minify implements Printable
 
         if ( $this->logResults ) {
             $differenceKb      = $this->initialSizeKb - $this->minifiedSizeKb;
-            $differencePercent = percentDifference( $this->initialSizeKb, $this->minifiedSizeKb );
+            $differencePercent = Num::percentDifference( $this->initialSizeKb, $this->minifiedSizeKb );
 
             if ( $differenceKb >= 1 ) {
                 Log::Notice(

@@ -4,8 +4,7 @@ namespace Northrook\Minify;
 
 use Northrook\Clerk;
 use Northrook\Minify\JavaScript\MinifierTokens;
-use function String\endsWith;
-use function String\startsWith;
+use Support\Str;
 
 /**
  * A stand-alone JavaScript minifier with {@see \Symfony\Component\HttpKernel\Profiler\Profiler} integration using {@see Clerk}.
@@ -135,7 +134,7 @@ final class JavaScriptMinifier implements \Stringable
         foreach ( $lines as $index => $line ) {
             $nextLine = $lines[ $index + 1 ] ?? false;
 
-            if ( startsWith( $nextLine, [ "'use strict'", "const", 'var', 'let' ] ) ) {
+            if ( Str::startsWith( $nextLine, [ "'use strict'", "const", 'var', 'let' ] ) ) {
                 $string .= "$line;";
                 continue;
             }
@@ -151,14 +150,14 @@ final class JavaScriptMinifier implements \Stringable
                 continue;
             }
 
-            if ( endsWith( $line, [ ']', ')', 'return' ] ) ) {
+            if ( Str::endsWith( $line, [ ']', ')', 'return' ] ) ) {
                 $string .= "$line; ";
                 continue;
             }
             if (
                     \str_ends_with( $line, "}" )
                     &&
-                    !startsWith( $nextLine, 'while' )
+                    !Str::startsWith( $nextLine, 'while' )
             ) {
                 $string .= "$line;";
                 continue;
@@ -167,14 +166,14 @@ final class JavaScriptMinifier implements \Stringable
             if (
                     (bool) \preg_match( '#^[\w\s\.=]+?$#m', $line )
                     &&
-                    !startsWith( $nextLine, [ "{", '(' ] )
+                    !Str::startsWith( $nextLine, [ "{", '(' ] )
             ) {
                 // dump( $nextLine );
                 $string .= "$line;";
                 continue;
             }
 
-            if ( startsWith( $nextLine, [ "return", "if" ] ) ) {
+            if ( Str::startsWith( $nextLine, [ "return", "if" ] ) ) {
                 $string .= "$line;";
                 continue;
             }
