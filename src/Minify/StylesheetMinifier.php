@@ -23,8 +23,8 @@ final class StylesheetMinifier
     protected bool $locked = false;
 
     /**
-     * @param string[]         $sources Will be scanned for .css files
-     * @param ?LoggerInterface $logger  Optional PSR-3 logger
+     * @param array<array-key, Path|string> $sources Will be scanned for .css files
+     * @param ?LoggerInterface              $logger  Optional PSR-3 logger
      */
     public function __construct(
         array                               $sources = [],
@@ -40,11 +40,11 @@ final class StylesheetMinifier
      *
      * Accepts raw CSS, or a path to a CSS file.
      *
-     * @param string ...$add
+     * @param Path|string ...$add
      *
      * @return $this
      */
-    final public function addSource( string ...$add ) : self
+    final public function addSource( string|Path ...$add ) : self
     {
         // TODO : [low] Support URL
 
@@ -61,13 +61,13 @@ final class StylesheetMinifier
             }
 
             // If the $source contains brackets, assume it is a raw CSS string
-            if ( \str_contains( $source, '{' ) && \str_contains( $source, '}' ) ) {
+            if ( \is_string( $source ) && ( \str_contains( $source, '{' ) && \str_contains( $source, '}' ) ) ) {
                 $this->sources['raw:'.hashKey( $source )] ??= $source;
 
                 continue;
             }
 
-            $path = new Path( $source );
+            $path = $source instanceof Path ? $source : new Path( $source );
 
             // If the source is a valid, readable path, add it
             if ( 'css' === $path->extension && $path->isReadable ) {
