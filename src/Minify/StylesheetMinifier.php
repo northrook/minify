@@ -1,96 +1,149 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Northrook\Minify;
 
-use Northrook\Minify;
-
-
-final class StylesheetMinifier extends Minify
+use LogicException;
+use Northrook\{Clerk};
+use Northrook\Minify\Stylesheet\Compiler;
+use Northrook\Resource\Path;
+use Psr\Log\LoggerInterface;
+use function String\{hashKey, sourceKey};
+/**
+ * @author Martin Nielsen <mn@northrook.com>
+ */
+final class StylesheetMinifier
 {
-    protected function minifyString() : void
-    {
-        $this->string = $this->minifyCSS( $this->string );
-        // $this->trimCssComments()
-        //      ->trimWhitespace()
-        //      // ->removeLeadingZeroIntegers()
-        //      ->removeEmptySelectors()
-        //      ->compress();
+    private readonly Compiler $compiler;
+
+    /** @var array<string, Path|string> */
+    private array $sources = [];
+
+    protected bool $locked = false;
+
+    /**
+     * @param string[]         $sources Will be scanned for .css files
+     * @param ?LoggerInterface $logger  Optional PSR-3 logger
+     */
+    public function __construct(
+        array                               $sources = [],
+        protected readonly ?LoggerInterface $logger = null,
+    ) {
+        Clerk::event( $this::class, 'document' );
+        $this->addSource( ...$sources );
+        Clerk::event( $this::class.'::initialized', 'document' );
     }
 
-    private function minifyCSS( string $input ) : string
+    /**
+     * Add one or more stylesheets to this generator.
+     *
+     * Accepts raw CSS, or a path to a CSS file.
+     *
+     * @param string ...$add
+     *
+     * @return $this
+     */
+    final public function addSource( string ...$add ) : self
     {
-        if ( \trim( $input ) === "" ) {
-            return $input;
+        // TODO : [low] Support URL
+
+        $this->throwIfLocked( 'Unable to add new source; locked by the build proccess.' );
+
+        foreach ( $add as $source ) {
+            if ( ! $source ) {
+                $this->logger?->warning(
+                    $this::class.' was provided an empty source string. It was not enqueued.',
+                    ['sources' => $add],
+                );
+
+                continue;
+            }
+
+            // If the $source contains brackets, assume it is a raw CSS string
+            if ( \str_contains( $source, '{' ) && \str_contains( $source, '}' ) ) {
+                $this->sources['raw:'.hashKey( $source )] ??= $source;
+
+                continue;
+            }
+
+            $path = new Path( $source );
+
+            // If the source is a valid, readable path, add it
+            if ( 'css' === $path->extension && $path->isReadable ) {
+                $this->sources["{$path->extension}:".sourceKey( $path )] ??= $path;
+
+                continue;
+            }
+
+            $this->logger?->error(
+                'Unable to add new source {source}, the path is not valid.',
+                ['source' => $source, 'path' => $path],
+            );
         }
-        return (string) \preg_replace(
-            [
-                // Remove comment(s)
-                '#("(?:[^"\\\]++|\\\.)*+"|\'(?:[^\'\\\\]++|\\\.)*+\')|\/\*(?!\!)(?>.*?\*\/)|^\s*|\s*$#s',
-                // Remove unused white-space(s)
-                '#("(?:[^"\\\]++|\\\.)*+"|\'(?:[^\'\\\\]++|\\\.)*+\'|\/\*(?>.*?\*\/))|\s*+;\s*+(})\s*+|\s*+([*$~^|]?+=|[{};,>~]|\s(?![0-9\.])|!important\b)\s*+|([[(:])\s++|\s++([])])|\s++(:)\s*+(?!(?>[^{}"\']++|"(?:[^"\\\]++|\\\.)*+"|\'(?:[^\'\\\\]++|\\\.)*+\')*+{)|^\s++|\s++\z|(\s)\s+#si',
-                // Replace `0(cm|em|ex|in|mm|pc|pt|px|vh|vw|%)` with `0`
-                '#(?<=[\s:])(0)(cm|em|ex|in|mm|pc|pt|px|vh|vw|%)#si',
-                // Replace `:0 0 0 0` with `:0`
-                '#:(0\s+0|0\s+0\s+0\s+0)(?=[;\}]|\!important)#i',
-                // Replace `background-position:0` with `background-position:0 0`
-                '#(background-position):0(?=[;\}])#si',
-                // Replace `0.6` with `.6`, but only when preceded by `:`, `,`, `-` or a white-space
-                '#(?<=[\s:,\-])0+\.(\d+)#s',
-                // Minify string value
-                '#(\/\*(?>.*?\*\/))|(?<!content\:)([\'"])([a-z_][a-z0-9\-_]*?)\2(?=[\s\{\}\];,])#si',
-                '#(\/\*(?>.*?\*\/))|(\burl\()([\'"])([^\s]+?)\3(\))#si',
-                // Minify HEX color code
-                '#(?<=[\s:,\-]\#)([a-f0-6]+)\1([a-f0-6]+)\2([a-f0-6]+)\3#i',
-                // Replace `(border|outline):none` with `(border|outline):0`
-                '#(?<=[\{;])(border|outline):none(?=[;\}\!])#',
-                // Remove empty selector(s)
-                '#(\/\*(?>.*?\*\/))|(^|[\{\}])(?:[^\s\{\}]+)\{\}#s',
-            ],
-            [
-                '$1',
-                '$1$2$3$4$5$6$7',
-                '$1',
-                ':0',
-                '$1:0 0',
-                '.$1',
-                '$1$3',
-                '$1$2$4$5',
-                '$1$2$3',
-                '$1:0',
-                '$1$2',
-            ],
-            $input,
+
+        return $this;
+    }
+
+    final public function minify() : string
+    {
+        Clerk::event( __METHOD__ );
+
+        // Lock the $sources
+        $this->locked = true;
+
+        // Initialize the compiler from provided $sources
+        $this->compiler ??= new Compiler(
+            $this->enqueueSources( $this->sources ),
+            $this->logger,
         );
+        $this->compiler->parseEnqueued()
+            ->mergeRules()
+            ->generateStylesheet();
+
+        $this->locked = false;
+
+        Clerk::event( __METHOD__ )->stop();
+        return $this->compiler->css;
+    }
+
+    private function enqueueSources( array $sources ) : array
+    {
+        foreach ( $sources as $index => $source ) {
+            $value = $source instanceof Path ? $source->read : $source;
+
+            if ( ! $value ) {
+                $this->logger?->critical(
+                    $this::class.' is unable to read source "{source}"',
+                    ['source' => $source],
+                );
+            }
+            $sources[$index] = $value;
+        }
+        return $sources;
+    }
+
+    // ? Locked
+
+    /**
+     * Check if the {@see StylesheetMinifier} is locked.
+     *
+     * @return bool
+     */
+    public function isLocked() : bool
+    {
+        return $this->locked;
     }
 
     /**
-     * Remove unnecessary leading zeros from the {@see StylesheetMinifier::$string} where possible.
+     * @param ?string $message Optional message
+     *
+     * @return void
      */
-    private function removeLeadingZeroIntegers() : self
+    private function throwIfLocked( ?string $message = null ) : void
     {
-        $this->string = preg_replace( '/(?<!\w)0\.(?!\d)|(?<!\w)(var|url|calc)\([^)]*\)/', '.', $this->string );
-        return $this;
+        if ( $this->locked ) {
+            throw new LogicException( $message ?? $this::class.' has been locked by the compile proccess.' );
+        }
     }
-
-    /**
-     * Remove selectors with empty declarations from the {@see StylesheetMinifier::$string}.
-     */
-    private function removeEmptySelectors() : self
-    {
-        $this->string = preg_replace( '/(?<=^)[^\{\};]+\{\s*\}/', '', $this->string );
-        $this->string = preg_replace( '/(?<=(\}|;))[^\{\};]+\{\s*\}/', '', $this->string );
-
-        return $this;
-    }
-
-    /**
-     * Further compress the {@see StylesheetMinifier::$string} by collapsing spaces where possible.
-     */
-    private function compress() : self
-    {
-        $this->string = preg_replace( '#\s*([*:;,>~{}])\s*#', '$1', $this->string );
-
-        return $this;
-    }
-
 }

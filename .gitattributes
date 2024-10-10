@@ -10,4 +10,4 @@ docs               export-ignore
 phpunit.xml.dist   export-ignore
 
 # Auto detect text files and perform LF normalization
-* text=auto
+* text=auto eol=lf

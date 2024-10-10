@@ -11,13 +11,13 @@
 # Build data
 .env
 *.lock
+*.cache
 /index.php
 /*.js
 /*.css
 /*.latte
 /templates/
 /tests/
-!/src/Minify/JavaScriptShrinker.php
 
 # Node
 /node_modules/
