@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Northrook\Minify\Stylesheet\Syntax;
+namespace Northrook\StylesheetMinifier\Syntax;
 
 /**
  * ```
@@ -12,6 +12,7 @@ namespace Northrook\Minify\Stylesheet\Syntax;
  *     }
  * }
  * ```.
+ *
  * @internal
  * @author Martin Nielsen <mn@northrook.com>
  */

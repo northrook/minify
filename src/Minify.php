@@ -2,29 +2,23 @@
 
 namespace Northrook;
 
-use Northrook\Interface\Printable;
+use Northrook\Exception\E_Value;
+use Northrook\Filesystem\Resource;
 use Northrook\Logger\Log;
-use Northrook\Minify\JavaScriptMinifier;
+use Northrook\Resource\{Path, URL};
 use Support\Num;
 use Northrook\Trait\PrintableClass;
-use function Support\classBasename;
-use function trim;
+use function String\{hashKey, sourceKey};
+use RuntimeException;
 
 /**
- * @method $this trimDocblockComments()
- * @method $this trimSingleComments()
- * @method $this trimBlockComments()
- * @method $this trimCssComments()
- * @method $this trimHtmlComments()
- * @method $this trimLatteComments()
- * @method $this trimTwigComments()
- * @method $this trimBladeComments()
- *
  * @author Martin Nielsen <mn@northrook.com>
  */
-class Minify implements Printable
+abstract class Minify
 {
     use PrintableClass;
+
+    protected const ?string EXTENSION = null;
 
     /**
      * Regex patterns for removing comments from a string.
@@ -48,54 +42,126 @@ class Minify implements Printable
 
     private float $minifiedSizeKb;
 
-    public readonly string $type;
+    private string $compiled;
 
-    final protected function __construct(
-        protected string $string,
-        protected ?bool  $logResults = null,
-    ) {
-        $this->type          = classBasename( $this::class );
-        $this->initialSizeKb = (float) Num::byteSize( $string );
-        $this->logResults ??= Env::isDebug();
-    }
+    /** @var array<string, array|resource|string> */
+    protected array $sources = [];
 
-    protected function minifyString() : void
+    protected bool $locked = false;
+
+    // Compile will be called when calling ->minify()
+    // before compile, we check combined file size
+    // returned string stored in ->string
+    // ->report() provides raw/compiled size comparison
+
+    abstract protected function compile( array $sources ) : string;
+
+    final public function minify() : string
     {
-        $this->trimWhitespace( true, true );
-    }
+        // Profiler
+        Clerk::event( __METHOD__ );
 
-    final public function minify( bool $repeat = false ) : self
-    {
-        if ( ! isset( $this->minifiedSizeKb ) || $repeat ) {
-            $this->minifyString();
-            $this->minifiedSizeKb = (float) Num::byteSize( $this->string );
+        // Lock the $sources
+        $this->locked = true;
+
+        if ( null === $this::EXTENSION ) {
+            throw new RuntimeException( 'The '.__CLASS__.'::EXTENSION must be defined.' );
         }
-        return $this;
+
+        $sources = $this->parseSources();
+
+        dump( $sources );
+
+        $this->compiled = $this->compile( $sources );
+
+        $this->minifiedSizeKb = (float) Num::byteSize( $this->compiled );
+
+        $this->locked = false;
+
+        Clerk::stop( __METHOD__ );
+
+        return $this->compiled;
     }
 
-    public function __toString() : string
+    /**
+     * @param array<string, array|resource|string> $sources
+     *
+     * @return array<string, Path|string>
+     */
+    private function parseSources( array $sources = [] ) : array
     {
-        $this->minify();
+        $array = [];
 
-        if ( $this->logResults ) {
-            $differenceKb      = $this->initialSizeKb - $this->minifiedSizeKb;
-            $differencePercent = Num::percentDifference( $this->initialSizeKb, $this->minifiedSizeKb );
+        foreach ( $sources as $source ) {
+            if ( \is_array( $source ) ) {
+                $array = [...$array, ...$this->parseSources( $source )];
 
-            if ( $differenceKb >= 1 ) {
-                Log::Notice(
-                    message : $this->type.' string minified {percent}, from {from} to {to} saving {diff},',
-                    context : [
-                        'from'    => "{$this->initialSizeKb}KB",
-                        'to'      => "{$this->minifiedSizeKb}KB",
-                        'diff'    => "{$differenceKb}KB",
-                        'percent' => "{$differencePercent}%",
-                    ],
-                );
+                continue;
+            }
+
+            // If the $source contains brackets, assume it is a raw CSS string
+            if ( \is_string( $source ) && ( \str_contains( $source, '{' ) && \str_contains( $source, '}' ) ) ) {
+                $array['raw:'.hashKey( $source )] ??= $source;
+
+                continue;
+            }
+
+            $resource = \is_string( $source ) ? Resource::from( $source ) : $source;
+
+            if ( $resource instanceof URL && $resource->exists ) {
+                $externalContent = $resource->fetch();
+                if ( \is_string( $externalContent ) ) {
+                    $array['url:'.hashKey( $externalContent )] ??= $externalContent;
+                }
+                else {
+                    E_Value::warning(
+                        '{minifier} was unable to process external source from URL {path}. The file was fetched, but appears empty.',
+                        [
+                            'minifier' => $this::class,
+                            'path'     => $resource->path,
+                            'resource' => $resource,
+                        ],
+                    );
+                }
+
+                continue;
+            }
+
+            \assert( $resource instanceof Path );
+
+            // If the source is a valid, readable path, add it
+            if ( $this::EXTENSION === $resource->extension && $resource->isReadable ) {
+                $array["{$resource->extension}:".sourceKey( $resource )] ??= $resource;
+
+                continue;
             }
         }
-
-        return $this->string;
+        return $array;
     }
+
+    // public function __toString() : string
+    // {
+    //     $this->minify();
+    //
+    //     if ( $this->logResults ) {
+    //         $differenceKb      = $this->initialSizeKb - $this->minifiedSizeKb;
+    //         $differencePercent = Num::percentDifference( $this->initialSizeKb, $this->minifiedSizeKb );
+    //
+    //         if ( $differenceKb >= 1 ) {
+    //             Log::Notice(
+    //                 message : $this->type.' string minified {percent}, from {from} to {to} saving {diff},',
+    //                 context : [
+    //                     'from'    => "{$this->initialSizeKb}KB",
+    //                     'to'      => "{$this->minifiedSizeKb}KB",
+    //                     'diff'    => "{$differenceKb}KB",
+    //                     'percent' => "{$differencePercent}%",
+    //                 ],
+    //             );
+    //         }
+    //     }
+    //
+    //     return $this->string;
+    // }
 
     public function report() : string
     {
@@ -106,193 +172,5 @@ class Minify implements Printable
         $differenceKb = $this->initialSizeKb - $this->minifiedSizeKb;
 
         return "StylesheetMinifier string minified. {$this->initialSizeKb}KB to {$this->minifiedSizeKb}KB, saving {$differenceKb}KB.";
-    }
-
-    // Static Functions --------------------
-
-    public static function string(
-        ?string    $string,
-        bool|array $removeComments = true,
-        bool       $removeTabs = true,
-        bool       $removeNewlines = true,
-    ) : ?string {
-        if ( ! $string ) {
-            return null;
-        }
-
-        $minify = new Minify\StringMinifier( $string );
-
-        if ( false !== $removeComments ) {
-            $minify->trimComments();
-        }
-
-        return $minify->trimWhitespace( $removeTabs, $removeNewlines );
-    }
-
-    /**
-     * Remove all unnecessary whitespace from a string.
-     *
-     * @param string $string
-     *
-     * @return string
-     */
-    public static function squish( string $string ) : string
-    {
-        return ( new Minify\StringMinifier( $string ) )->trimWhitespace();
-    }
-
-    public static function HTML( string $source, ?bool $logResults = null ) : string
-    {
-        return (string) new Minify\HtmlMinifier( $source, $logResults );
-    }
-
-    /**
-     * @param string[] $source
-     * @param ?bool    $logResults
-     *
-     * @return string
-     */
-    public static function CSS( string|array $source, ?bool $logResults = null ) : string
-    {
-        if ( \trim( $source ) === '' ) {
-            return $source;
-        }
-        return (string) \preg_replace(
-            [
-                // Remove comment(s)
-                '#("(?:[^"\\\]++|\\\.)*+"|\'(?:[^\'\\\\]++|\\\.)*+\')|\/\*(?!\!)(?>.*?\*\/)|^\s*|\s*$#s',
-                // Remove unused white-space(s)
-                '#("(?:[^"\\\]++|\\\.)*+"|\'(?:[^\'\\\\]++|\\\.)*+\'|\/\*(?>.*?\*\/))|\s*+;\s*+(})\s*+|\s*+([*$~^|]?+=|[{};,>~]|\s(?![0-9\.])|!important\b)\s*+|([[(:])\s++|\s++([])])|\s++(:)\s*+(?!(?>[^{}"\']++|"(?:[^"\\\]++|\\\.)*+"|\'(?:[^\'\\\\]++|\\\.)*+\')*+{)|^\s++|\s++\z|(\s)\s+#si',
-                // Replace `0(cm|em|ex|in|mm|pc|pt|px|vh|vw|%)` with `0`
-                '#(?<=[\s:])(0)(cm|em|ex|in|mm|pc|pt|px|vh|vw|%)#si',
-                // Replace `:0 0 0 0` with `:0`
-                '#:(0\s+0|0\s+0\s+0\s+0)(?=[;\}]|\!important)#i',
-                // Replace `background-position:0` with `background-position:0 0`
-                '#(background-position):0(?=[;\}])#si',
-                // Replace `0.6` with `.6`, but only when preceded by `:`, `,`, `-` or a white-space
-                '#(?<=[\s:,\-])0+\.(\d+)#s',
-                // Minify string value
-                '#(\/\*(?>.*?\*\/))|(?<!content\:)([\'"])([a-z_][a-z0-9\-_]*?)\2(?=[\s\{\}\];,])#si',
-                '#(\/\*(?>.*?\*\/))|(\burl\()([\'"])([^\s]+?)\3(\))#si',
-                // Minify HEX color code
-                '#(?<=[\s:,\-]\#)([a-f0-6]+)\1([a-f0-6]+)\2([a-f0-6]+)\3#i',
-                // Replace `(border|outline):none` with `(border|outline):0`
-                '#(?<=[\{;])(border|outline):none(?=[;\}\!])#',
-                // Remove empty selector(s)
-                '#(\/\*(?>.*?\*\/))|(^|[\{\}])(?:[^\s\{\}]+)\{\}#s',
-            ],
-            [
-                '$1',
-                '$1$2$3$4$5$6$7',
-                '$1',
-                ':0',
-                '$1:0 0',
-                '.$1',
-                '$1$3',
-                '$1$2$4$5',
-                '$1$2$3',
-                '$1:0',
-                '$1$2',
-            ],
-            $source,
-        );
-    }
-
-    /**
-     * @param string  $source
-     * @param ?string $profilerTag
-     *
-     * @return null|string
-     */
-    public static function JS( string $source, ?string $profilerTag = null ) : ?string
-    {
-        return $source ? ( new JavaScriptMinifier( $source, $profilerTag ) )->minify() : $source;
-    }
-
-    public static function Latte( string $source, ?bool $logResults = null ) : Minify
-    {
-        return new Minify\LatteMinifier( $source, $logResults );
-    }
-
-    /**
-     * Optimize an SvgMinifier string.
-     *
-     * - Removes all whitespace, including tabs and newlines
-     * - Removes consecutive spaces
-     * - Removes the XML namespace by default
-     *
-     * @param string    $string     The string SvgMinifier string
-     * @param null|bool $logResults
-     *
-     * @return Minify
-     */
-    public static function SVG( string $string, ?bool $logResults = null ) : Minify
-    {
-        return new Minify\SvgMinifier( $string, $logResults );
-    }
-
-    // Trim Functions ------
-
-    /**
-     * Compress a string by removing consecutive whitespace and empty lines.
-     *
-     * - Removes empty lines
-     * - Removes consecutive spaces
-     * - Remove tabs, newlines, and carriage returns by default
-     *
-     * @param bool $removeTabs     Also remove tabs
-     * @param bool $removeNewlines Also remove newlines
-     *
-     * @return $this
-     */
-    final protected function trimWhitespace(
-        bool $removeTabs = true,
-        bool $removeNewlines = true,
-    ) : self {
-        // Trim according to arguments
-        $this->string = match ( true ) {
-            // Remove all whitespace, including tabs and newlines
-            $removeTabs && $removeNewlines => \preg_replace( '/\s+/', ' ', $this->string ),
-            // Remove tabs only
-            $removeTabs => \str_replace( '\t', ' ', $this->string ),
-            // Remove newlines only
-            $removeNewlines => \str_replace( '\R', ' ', $this->string ),
-            // Remove consecutive whitespaces
-            default => \preg_replace( '# +#', ' ', $this->string ),
-        };
-
-        // Remove empty lines
-        $this->string = \preg_replace( '#^\s*?$\n#m', '', $this->string );
-
-        $this->string = \trim( $this->string );
-
-        return $this;
-    }
-
-    public function trimComments() : self
-    {
-        foreach ( Minify::REGEX_PATTERN as $pattern ) {
-            $this->string = \preg_replace(
-                pattern     : $pattern,
-                replacement : '',
-                subject     : $this->string,
-            );
-        }
-        return $this;
-    }
-
-    public function __call( string $method, array $arguments ) : self
-    {
-        $pattern = Minify::REGEX_PATTERN[$method] ?? false;
-
-        if ( $pattern ) {
-            $this->string = \preg_replace(
-                pattern     : $pattern,
-                replacement : '',
-                subject     : $this->string,
-            );
-        }
-
-        return $this;
     }
 }

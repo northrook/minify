@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Northrook\Minify\Stylesheet;
+namespace Northrook\StylesheetMinifier;
 
 use LogicException;
-
-use Northrook\Minify\Stylesheet\Syntax\{Block, Rule, Statement};
+use Northrook\StylesheetMinifier\Syntax\{Block};
+use Northrook\StylesheetMinifier\Syntax\Rule;
+use Northrook\StylesheetMinifier\Syntax\Statement;
 
 /**
  * @internal

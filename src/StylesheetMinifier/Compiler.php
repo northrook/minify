@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Northrook\Minify\Stylesheet;
+namespace Northrook\StylesheetMinifier;
 
-use Northrook\{Clerk, Minify};
-use Northrook\Minify\Stylesheet\Syntax\{Block, Rule, Statement};
+use LogicException;
+use Northrook\{Clerk, StylesheetMinifier\Syntax\Block, StylesheetMinifier\Syntax\Statement};
+use Northrook\StylesheetMinifier\Syntax\{Rule};
 use Psr\Log\LoggerInterface;
 use Support\Num;
 use function String\hashKey;
-use LogicException;
 
 /**
  * @author Martin Nielsen <mn@northrook.com>

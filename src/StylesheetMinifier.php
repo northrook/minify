@@ -2,25 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Northrook\Minify;
+namespace Northrook;
 
 use LogicException;
-use Northrook\{Clerk};
-use Northrook\Minify\Stylesheet\Compiler;
+use Northrook\Filesystem\Resource;
 use Northrook\Resource\Path;
+use Northrook\StylesheetMinifier\Compiler;
 use Psr\Log\LoggerInterface;
 use function String\{hashKey, sourceKey};
+
 /**
  * @author Martin Nielsen <mn@northrook.com>
  */
-final class StylesheetMinifier
+final class StylesheetMinifier extends Minify
 {
+    protected const ?string EXTENSION = 'css';
+
     private readonly Compiler $compiler;
-
-    /** @var array<string, Path|string> */
-    private array $sources = [];
-
-    protected bool $locked = false;
 
     /**
      * @param array<array-key, Path|string> $sources Will be scanned for .css files
@@ -40,11 +38,11 @@ final class StylesheetMinifier
      *
      * Accepts raw CSS, or a path to a CSS file.
      *
-     * @param Path|string ...$add
+     * @param resource|string ...$add
      *
      * @return $this
      */
-    final public function addSource( string|Path ...$add ) : self
+    final public function addSource( string|Resource ...$add ) : self
     {
         // TODO : [low] Support URL
 
@@ -85,42 +83,15 @@ final class StylesheetMinifier
         return $this;
     }
 
-    final public function minify() : string
+    protected function compile( array $sources ) : string
     {
-        Clerk::event( __METHOD__ );
-
-        // Lock the $sources
-        $this->locked = true;
-
         // Initialize the compiler from provided $sources
-        $this->compiler ??= new Compiler(
-            $this->enqueueSources( $this->sources ),
-            $this->logger,
-        );
+        $this->compiler ??= new Compiler( $sources, $this->logger );
         $this->compiler->parseEnqueued()
             ->mergeRules()
             ->generateStylesheet();
 
-        $this->locked = false;
-
-        Clerk::event( __METHOD__ )->stop();
         return $this->compiler->css;
-    }
-
-    private function enqueueSources( array $sources ) : array
-    {
-        foreach ( $sources as $index => $source ) {
-            $value = $source instanceof Path ? $source->read : $source;
-
-            if ( ! $value ) {
-                $this->logger?->critical(
-                    $this::class.' is unable to read source "{source}"',
-                    ['source' => $source],
-                );
-            }
-            $sources[$index] = $value;
-        }
-        return $sources;
     }
 
     // ? Locked

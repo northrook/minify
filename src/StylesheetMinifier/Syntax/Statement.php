@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Northrook\Minify\Stylesheet\Syntax;
+namespace Northrook\StylesheetMinifier\Syntax;
 
 use InvalidArgumentException;
 

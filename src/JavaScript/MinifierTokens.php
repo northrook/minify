@@ -1,6 +1,6 @@
 <?php
 
-namespace Northrook\Minify\JavaScript;
+namespace Northrook\JavaScript;
 
 /**
  * @internal

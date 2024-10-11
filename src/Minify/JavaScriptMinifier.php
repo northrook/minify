@@ -3,7 +3,7 @@
 namespace Northrook\Minify;
 
 use Northrook\Clerk;
-use Northrook\Minify\JavaScript\MinifierTokens;
+use Northrook\JavaScript\MinifierTokens;
 use Support\Str;
 
 /**
