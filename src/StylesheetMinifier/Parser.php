@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace Northrook\StylesheetMinifier;
 
 use LogicException;
-use Northrook\StylesheetMinifier\Syntax\{Block};
-use Northrook\StylesheetMinifier\Syntax\Rule;
-use Northrook\StylesheetMinifier\Syntax\Statement;
+use Northrook\StylesheetMinifier\Syntax\{Block, Rule, Statement};
 
 /**
  * @internal

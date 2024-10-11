@@ -1,10 +1,11 @@
 <?php
 
-namespace Northrook\Minify;
+namespace Northrook;
 
-use Northrook\Clerk;
-use Northrook\JavaScript\MinifierTokens;
+use Northrook\JavaScriptMinifier\MinifierTokens;
 use Support\Str;
+use Exception;
+use Stringable;
 
 /**
  * A stand-alone JavaScript minifier with {@see \Symfony\Component\HttpKernel\Profiler\Profiler} integration using {@see Clerk}.
@@ -20,9 +21,8 @@ use Support\Str;
  *
  * @license   MIT License
  */
-final class JavaScriptMinifier implements \Stringable
+final class JavaScriptMinifier implements Stringable
 {
-
     use MinifierTokens;
 
     private readonly string $profilerGroup;
@@ -37,7 +37,7 @@ final class JavaScriptMinifier implements \Stringable
     /**
      * Array of patterns to match.
      *
-     * @var array<string, array<string|callable>>
+     * @var array<string, array<callable|string>>
      */
     protected array $patterns = [];
 
@@ -55,13 +55,14 @@ final class JavaScriptMinifier implements \Stringable
     /**
      * Initialize the Minifier.
      *
-     * @param string|string[]  $source  [optional] Add one or more sources on initialization
+     * @param string|string[] $source      [optional] Add one or more sources on initialization
+     * @param ?string         $profilerTag
      */
-    public function __construct( string | array $source, ?string $profilerTag = null )
+    public function __construct( string|array $source, ?string $profilerTag = null )
     {
-        $this->profilerGroup = $this::class . ( $profilerTag ? "::$profilerTag" : null );
+        $this->profilerGroup = $this::class.( $profilerTag ? "::{$profilerTag}" : null );
         Clerk::event( $this->profilerGroup, $this->profilerGroup );
-        \array_map( [ $this, 'add' ], (array) $source );
+        \array_map( [$this, 'add'], (array) $source );
     }
 
     public function __toString() : string
@@ -70,8 +71,7 @@ final class JavaScriptMinifier implements \Stringable
     }
 
     /**
-     * Minify the {@see self::$data}
-     *
+     * Minify the {@see self::$data}.
      *
      * @return string The minified data
      */
@@ -105,7 +105,7 @@ final class JavaScriptMinifier implements \Stringable
             $js = $this->stripWhitespace( $js );
 
             // combine js: separating the scripts by a ;
-            $content .= $js . ';';
+            $content .= $js.';';
         }
         // clean up leftover `;`s from the combination of multiple scripts
         $content = \ltrim( $content, ';' );
@@ -132,53 +132,58 @@ final class JavaScriptMinifier implements \Stringable
         $lines = \explode( "\n", $content );
 
         foreach ( $lines as $index => $line ) {
-            $nextLine = $lines[ $index + 1 ] ?? false;
+            $nextLine = $lines[$index + 1] ?? false;
 
-            if ( Str::startsWith( $nextLine, [ "'use strict'", "const", 'var', 'let' ] ) ) {
-                $string .= "$line;";
+            if ( Str::startsWith( $nextLine, ["'use strict'", 'const', 'var', 'let'] ) ) {
+                $string .= "{$line};";
+
                 continue;
             }
 
-            if ( (bool) preg_match( '#^\w+?\..{2}#m', $line ) ) {
+            if ( (bool) \preg_match( '#^\w+?\..{2}#m', $line ) ) {
                 // dump( $line );
-                $string .= "$line;";
+                $string .= "{$line};";
+
                 continue;
             }
 
-            if ( (bool) preg_match( '#^\w+?=.{2}#m', $line ) ) {
-                $string .= "$line;";
+            if ( (bool) \preg_match( '#^\w+?=.{2}#m', $line ) ) {
+                $string .= "{$line};";
+
                 continue;
             }
 
-            if ( Str::endsWith( $line, [ ']', ')', 'return' ] ) ) {
-                $string .= "$line; ";
+            if ( Str::endsWith( $line, [']', ')', 'return'] ) ) {
+                $string .= "{$line}; ";
+
                 continue;
             }
             if (
-                    \str_ends_with( $line, "}" )
-                    &&
-                    !Str::startsWith( $nextLine, 'while' )
+                \str_ends_with( $line, '}' )
+                && ! Str::startsWith( $nextLine, 'while' )
             ) {
-                $string .= "$line;";
+                $string .= "{$line};";
+
                 continue;
             }
 
             if (
-                    (bool) \preg_match( '#^[\w\s\.=]+?$#m', $line )
-                    &&
-                    !Str::startsWith( $nextLine, [ "{", '(' ] )
+                (bool) \preg_match( '#^[\w\s\.=]+?$#m', $line )
+                && ! Str::startsWith( $nextLine, ['{', '('] )
             ) {
                 // dump( $nextLine );
-                $string .= "$line;";
+                $string .= "{$line};";
+
                 continue;
             }
 
-            if ( Str::startsWith( $nextLine, [ "return", "if" ] ) ) {
-                $string .= "$line;";
+            if ( Str::startsWith( $nextLine, ['return', 'if'] ) ) {
+                $string .= "{$line};";
+
                 continue;
             }
 
-            $string .= "$line\n";
+            $string .= "{$line}\n";
         }
 
         return $string;
@@ -187,7 +192,7 @@ final class JavaScriptMinifier implements \Stringable
     /**
      * Add a file or straight-up code to be minified.
      *
-     * @param string  ...$sourcePath
+     * @param string ...$sourcePath
      *
      * @return static
      */
@@ -210,7 +215,7 @@ final class JavaScriptMinifier implements \Stringable
             $value = $this->normalizeLinefeeds( $value );
 
             // store data
-            $this->data[ $key ] = $value;
+            $this->data[$key] = $value;
         }
 
         return $this;
@@ -219,7 +224,7 @@ final class JavaScriptMinifier implements \Stringable
     /**
      * Load data.
      *
-     * @param string  $data  Either a path to a file or the content itself
+     * @param string $data Either a path to a file or the content itself
      *
      * @return string
      */
@@ -245,7 +250,7 @@ final class JavaScriptMinifier implements \Stringable
      * replaced with placeholder text in extract*(). The original content was
      * saved in $this->extracted.
      *
-     * @param string  $content
+     * @param string $content
      *
      * @return string
      */
@@ -254,12 +259,12 @@ final class JavaScriptMinifier implements \Stringable
         Clerk::event( __METHOD__, $this->profilerGroup );
         // dump( $this->extracted );
         // print_r(  \array_slice( $this->extracted, 592, 7) );
-        if ( !$this->extracted ) {
+        if ( ! $this->extracted ) {
             // nothing was extracted, nothing to restore
             return $content;
         }
 
-        $content = strtr( $content, $this->extracted );
+        $content = \strtr( $content, $this->extracted );
 
         $this->extracted = [];
 
@@ -275,76 +280,77 @@ final class JavaScriptMinifier implements \Stringable
      * The only way to accurately replace these pieces is to traverse the JS one
      * character at a time and try to find whatever starts first.
      *
-     * @param string  $content  The content to replace patterns in
+     * @param string $content The content to replace patterns in
      *
      * @return string The (manipulated) content
      */
     final protected function replace( string $content ) : string
     {
-        $contentLength   = strlen( $content );
+        $contentLength   = \strlen( $content );
         $output          = '';
         $processedOffset = 0;
-        $positions       = array_fill( 0, count( $this->patterns ), -1 );
+        $positions       = \array_fill( 0, \count( $this->patterns ), -1 );
         $matches         = [];
 
         while ( $processedOffset < $contentLength ) {
             // find first match for all patterns
             foreach ( $this->patterns as $i => $pattern ) {
-                [ $pattern, $replacement ] = $pattern;
+                [$pattern, $replacement] = $pattern;
 
                 // we can safely ignore patterns for positions we've unset earlier,
                 // because we know these won't show up anymore
-                if ( !\array_key_exists( $i, $positions ) ) {
+                if ( ! \array_key_exists( $i, $positions ) ) {
                     continue;
                 }
 
                 // no need to re-run matches that are still in the part of the
                 // content that hasn't been processed
-                if ( $positions[ $i ] >= $processedOffset ) {
+                if ( $positions[$i] >= $processedOffset ) {
                     continue;
                 }
 
                 $match = null;
-                if ( preg_match( $pattern, $content, $match, PREG_OFFSET_CAPTURE, $processedOffset ) ) {
-                    $matches[ $i ] = $match;
+                if ( \preg_match( $pattern, $content, $match, PREG_OFFSET_CAPTURE, $processedOffset ) ) {
+                    $matches[$i] = $match;
 
                     // we'll store the match position as well; that way, we
                     // don't have to redo all preg_matches after changing only
                     // the first (we'll still know where those others are)
-                    $positions[ $i ] = $match[ 0 ][ 1 ];
+                    $positions[$i] = $match[0][1];
                 }
                 else {
                     // if the pattern couldn't be matched, there's no point in
                     // executing it again in later runs on this same content;
                     // ignore this one until we reach end of content
-                    unset( $matches[ $i ], $positions[ $i ] );
+                    unset( $matches[$i], $positions[$i] );
                 }
             }
 
             // no more matches to find: everything's been processed, break out
-            if ( !$matches ) {
+            if ( ! $matches ) {
                 // output the remaining content
-                $output .= substr( $content, $processedOffset );
+                $output .= \substr( $content, $processedOffset );
+
                 break;
             }
 
             // see which of the patterns actually found the first thing (we'll
             // only want to execute that one, since we're unsure if what the
             // other found was not inside what the first found)
-            $matchOffset  = min( $positions );
-            $firstPattern = array_search( $matchOffset, $positions );
-            $match        = $matches[ $firstPattern ];
+            $matchOffset  = \min( $positions );
+            $firstPattern = \array_search( $matchOffset, $positions );
+            $match        = $matches[$firstPattern];
 
             // execute the pattern that matches earliest in the content string
-            [ , $replacement ] = $this->patterns[ $firstPattern ];
+            [, $replacement] = $this->patterns[$firstPattern];
 
             // add the part of the input between $processedOffset and the first match;
             // that content wasn't matched by anything
-            $output .= substr( $content, $processedOffset, $matchOffset - $processedOffset );
+            $output .= \substr( $content, $processedOffset, $matchOffset - $processedOffset );
             // add the replacement for the match
             $output .= $this->executeReplacement( $replacement, $match );
             // advance $processedOffset past the match
-            $processedOffset = $matchOffset + strlen( $match[ 0 ][ 0 ] );
+            $processedOffset = $matchOffset + \strlen( $match[0][0] );
         }
 
         return $output;
@@ -354,19 +360,20 @@ final class JavaScriptMinifier implements \Stringable
      * If $replacement is a callback, execute it, passing in the match data.
      * If it's a string, just pass it through.
      *
-     * @param callable|string  $replacement  Replacement value
-     * @param array            $match        Match data, in PREG_OFFSET_CAPTURE form
+     * @param callable|string $replacement Replacement value
+     * @param array           $match       Match data, in PREG_OFFSET_CAPTURE form
      *
      * @return string
      */
-    final protected function executeReplacement( callable | string $replacement, array $match ) : string
+    final protected function executeReplacement( callable|string $replacement, array $match ) : string
     {
-        if ( !is_callable( $replacement ) ) {
+        if ( ! \is_callable( $replacement ) ) {
             return $replacement;
         }
+
         // convert $match from the PREG_OFFSET_CAPTURE form to the form the callback expects
         foreach ( $match as &$matchItem ) {
-            $matchItem = $matchItem[ 0 ];
+            $matchItem = $matchItem[0];
         }
 
         return $replacement( $match );
@@ -375,7 +382,7 @@ final class JavaScriptMinifier implements \Stringable
     /**
      * Replaces all occurrences of array['key'] by array.key.
      *
-     * @param string  $content
+     * @param string $content
      *
      * @return string
      */
@@ -383,18 +390,17 @@ final class JavaScriptMinifier implements \Stringable
     {
         // PHP only supports $this inside anonymous functions since 5.4
         $keywords = $this::keywordsReserved;
-        $callback = function( $match ) use ( $keywords )
-        {
+        $callback = function( $match ) use ( $keywords ) {
             $minifier = $this;
-            $property = trim( $minifier->extracted[ $match[ 1 ] ], '\'"' );
+            $property = \trim( $minifier->extracted[$match[1]], '\'"' );
 
             /*
              * Check if the property is a reserved keyword. In this context (as
              * property of an object literal/array) it shouldn't matter, but IE8
              * freaks out with "Expected identifier".
              */
-            if ( in_array( $property, $keywords ) ) {
-                return $match[ 0 ];
+            if ( \in_array( $property, $keywords ) ) {
+                return $match[0];
             }
 
             /*
@@ -402,11 +408,11 @@ final class JavaScriptMinifier implements \Stringable
              * array['key-here'] can't be replaced by array.key-here since '-'
              * is not a valid character there.
              */
-            if ( !preg_match( '/^' . $this::REGEX . '$/u', $property ) ) {
-                return $match[ 0 ];
+            if ( ! \preg_match( '/^'.$this::REGEX.'$/u', $property ) ) {
+                return $match[0];
             }
 
-            return '.' . $property;
+            return '.'.$property;
         };
 
         /*
@@ -417,8 +423,8 @@ final class JavaScriptMinifier implements \Stringable
          * regex implementation doesn't allow unfixed-length look-behind
          * assertions.
          */
-        preg_match( '/(\[[^\]]+\])[^\]]*$/', static::REGEX, $previousChar );
-        $previousChar = $previousChar[ 1 ];
+        \preg_match( '/(\[[^\]]+\])[^\]]*$/', static::REGEX, $previousChar );
+        $previousChar = $previousChar[1];
 
         /*
          * Make sure word preceding the ['value'] is not a keyword, e.g.
@@ -427,17 +433,19 @@ final class JavaScriptMinifier implements \Stringable
          * separate look-behind assertions, one for each keyword.
          */
         $keywords = $this->getKeywordsForRegex( $keywords );
-        $keywords = '(?<!' . implode( ')(?<!', $keywords ) . ')';
+        $keywords = '(?<!'.\implode( ')(?<!', $keywords ).')';
 
-        return preg_replace_callback(
-                '/(?<=' . $previousChar . '|\])' . $keywords . '\[\s*(([\'"])[0-9]+\\2)\s*\]/u', $callback, $content,
+        return \preg_replace_callback(
+            '/(?<='.$previousChar.'|\])'.$keywords.'\[\s*(([\'"])[0-9]+\\2)\s*\]/u',
+            $callback,
+            $content,
         );
     }
 
     /**
      * Replaces true & false by !0 and !1.
      *
-     * @param string  $content
+     * @param string $content
      *
      * @return string
      */
@@ -450,39 +458,41 @@ final class JavaScriptMinifier implements \Stringable
          * whitespace) lookbehind assertions, I need to capture the leading
          * character and check if it's a `.`
          */
-        $callback = function( $match )
-        {
-            if ( trim( $match[ 1 ] ) === '.' ) {
-                return $match[ 0 ];
+        $callback = function( $match ) {
+            if ( \trim( $match[1] ) === '.' ) {
+                return $match[0];
             }
 
-            return $match[ 1 ] . ( $match[ 2 ] === 'true' ? '!0' : '!1' );
+            return $match[1].( 'true' === $match[2] ? '!0' : '!1' );
         };
-        $content  = preg_replace_callback( '/(^|.\s*)\b(true|false)\b(?!:)/', $callback, $content );
+        $content = \preg_replace_callback( '/(^|.\s*)\b(true|false)\b(?!:)/', $callback, $content );
 
         // for(;;) is exactly the same as while(true), but shorter :)
-        $content = preg_replace( '/\bwhile\(!0\){/', 'for(;;){', $content );
+        $content = \preg_replace( '/\bwhile\(!0\){/', 'for(;;){', $content );
 
         // now make sure we didn't turn any do ... while(true) into do ... for(;;)
-        preg_match_all( '/\bdo\b/', $content, $dos, PREG_OFFSET_CAPTURE | PREG_SET_ORDER );
+        \preg_match_all( '/\bdo\b/', $content, $dos, PREG_OFFSET_CAPTURE | PREG_SET_ORDER );
 
         // go backward to make sure positional offsets aren't altered when $content changes
-        $dos = array_reverse( $dos );
+        $dos = \array_reverse( $dos );
+
         foreach ( $dos as $do ) {
-            $offsetDo = $do[ 0 ][ 1 ];
+            $offsetDo = $do[0][1];
 
             // find all `while` (now `for`) following `do`: one of those must be
             // associated with the `do` and be turned back into `while`
-            preg_match_all( '/\bfor\(;;\)/', $content, $whiles, PREG_OFFSET_CAPTURE | PREG_SET_ORDER, $offsetDo );
-            foreach ( $whiles as $while ) {
-                $offsetWhile = $while[ 0 ][ 1 ];
+            \preg_match_all( '/\bfor\(;;\)/', $content, $whiles, PREG_OFFSET_CAPTURE | PREG_SET_ORDER, $offsetDo );
 
-                $open  = substr_count( $content, '{', $offsetDo, $offsetWhile - $offsetDo );
-                $close = substr_count( $content, '}', $offsetDo, $offsetWhile - $offsetDo );
+            foreach ( $whiles as $while ) {
+                $offsetWhile = $while[0][1];
+
+                $open  = \substr_count( $content, '{', $offsetDo, $offsetWhile - $offsetDo );
+                $close = \substr_count( $content, '}', $offsetDo, $offsetWhile - $offsetDo );
                 if ( $open === $close ) {
                     // only restore `while` if amount of `{` and `}` are the same;
                     // otherwise, that `for` isn't associated with this `do`
-                    $content = substr_replace( $content, 'while(!0)', $offsetWhile, strlen( 'for(;;)' ) );
+                    $content = \substr_replace( $content, 'while(!0)', $offsetWhile, \strlen( 'for(;;)' ) );
+
                     break;
                 }
             }
@@ -502,35 +512,34 @@ final class JavaScriptMinifier implements \Stringable
      * and after doing all other minifying, we can restore the original content
      * via restoreStrings().
      *
-     * @param string  $chars
-     * @param string  $placeholderPrefix
+     * @param string $chars
+     * @param string $placeholderPrefix
      */
     final protected function extractStrings( string $chars = '\'"', string $placeholderPrefix = '' ) : void
     {
         Clerk::event( __METHOD__, $this->profilerGroup );
         // PHP only supports $this inside anonymous functions since 5.4
-        $callback = function( $match ) use ( $placeholderPrefix )
-        {
+        $callback = function( $match ) use ( $placeholderPrefix ) {
             // check the second index here, because the first always contains a quote
-            if ( $match[ 2 ] === '' ) {
+            if ( '' === $match[2] ) {
                 /*
                  * Empty strings need no placeholder; they can't be confused for
                  * anything else anyway.
                  * But we still needed to match them, for the extraction routine
                  * to skip over this particular string.
                  */
-                return $match[ 0 ];
+                return $match[0];
             }
 
-            $count       = count( $this->extracted );
-            $placeholder = $match[ 1 ] . $placeholderPrefix . $count . $match[ 1 ];
+            $count       = \count( $this->extracted );
+            $placeholder = $match[1].$placeholderPrefix.$count.$match[1];
 
-            if ( preg_match( '#\\\\(\\s+?)\\.#m', $match[ 2 ] ) ) {
+            if ( \preg_match( '#\\\\(\\s+?)\\.#m', $match[2] ) ) {
                 // $hasNewline = \str_contains( $match[ 2 ], "\n" ) ? "\n" : null;
-                $match[ 2 ] = preg_replace( '#(\\\\)\\s*?([\\.\'`"])#m', '$1$2', $match[ 2 ] );
+                $match[2] = \preg_replace( '#(\\\\)\\s*?([\\.\'`"])#m', '$1$2', $match[2] );
             }
 
-            $this->extracted[ $placeholder ] = $match[ 1 ] . $match[ 2 ] . $match[ 1 ];
+            $this->extracted[$placeholder] = $match[1].$match[2].$match[1];
 
             return $placeholder;
         };
@@ -547,7 +556,7 @@ final class JavaScriptMinifier implements \Stringable
          * considered as escape-char (times 2) and to get it in the regex,
          * escaped (times 2)
          */
-        $this->registerPattern( '/([' . $chars . '])(.*?(?<!\\\\)(\\\\\\\\)*+)\\1/s', $callback );
+        $this->registerPattern( '/(['.$chars.'])(.*?(?<!\\\\)(\\\\\\\\)*+)\\1/s', $callback );
 
         Clerk::stop( __METHOD__ );
     }
@@ -573,11 +582,10 @@ final class JavaScriptMinifier implements \Stringable
     {
         Clerk::event( __METHOD__, $this->profilerGroup );
         // PHP only supports $this inside anonymous functions since 5.4
-        $callback = function( $match )
-        {
-            $count                           = count( $this->extracted );
-            $placeholder                     = '"' . $count . '"';
-            $this->extracted[ $placeholder ] = $match[ 0 ];
+        $callback = function( $match ) {
+            $count                         = \count( $this->extracted );
+            $placeholder                   = '"'.$count.'"';
+            $this->extracted[$placeholder] = $match[0];
 
             return $placeholder;
         };
@@ -590,14 +598,13 @@ final class JavaScriptMinifier implements \Stringable
         // then also ignore bare `/` inside `[]`, where they don't need to be
         // escaped: anything inside `[]` can be ignored safely
         $pattern
-                =
-                '\\/(?!\*)(?:[^\\[\\/\\\\\n\r]++|(?:\\\\.)++|(?:\\[(?:[^\\]\\\\\n\r]++|(?:\\\\.)++)++\\])++)++\\/[gimuy]*';
+                = '\\/(?!\*)(?:[^\\[\\/\\\\\n\r]++|(?:\\\\.)++|(?:\\[(?:[^\\]\\\\\n\r]++|(?:\\\\.)++)++\\])++)++\\/[gimuy]*';
 
         // a regular expression can only be followed by a few operators or some
         // of the RegExp methods (a `\` followed by a variable or value is
         // likely part of a division, not a regex)
-        $keywords             = [ 'do', 'in', 'new', 'else', 'throw', 'yield', 'delete', 'return', 'typeof' ];
-        $before               = '(^|[=:,;\+\-\*\?\/\}\(\{\[&\|!]|' . implode( '|', $keywords ) . ')\s*';
+        $keywords             = ['do', 'in', 'new', 'else', 'throw', 'yield', 'delete', 'return', 'typeof'];
+        $before               = '(^|[=:,;\+\-\*\?\/\}\(\{\[&\|!]|'.\implode( '|', $keywords ).')\s*';
         $propertiesAndMethods = [
             // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp#Properties_2
             'constructor',
@@ -615,10 +622,10 @@ final class JavaScriptMinifier implements \Stringable
             'toSource(',
             'toString(',
         ];
-        $delimiters           = array_fill( 0, count( $propertiesAndMethods ), '/' );
-        $propertiesAndMethods = array_map( 'preg_quote', $propertiesAndMethods, $delimiters );
-        $after                = '(?=\s*([\.,;:\)\}&\|+]|\/\/|$|\.(' . implode( '|', $propertiesAndMethods ) . ')))';
-        $this->registerPattern( '/' . $before . '\K' . $pattern . $after . '/', $callback );
+        $delimiters           = \array_fill( 0, \count( $propertiesAndMethods ), '/' );
+        $propertiesAndMethods = \array_map( 'preg_quote', $propertiesAndMethods, $delimiters );
+        $after                = '(?=\s*([\.,;:\)\}&\|+]|\/\/|$|\.('.\implode( '|', $propertiesAndMethods ).')))';
+        $this->registerPattern( '/'.$before.'\K'.$pattern.$after.'/', $callback );
 
         // regular expressions following a `)` are rather annoying to detect...
         // quite often, `/` after `)` is a division operator & if it happens to
@@ -632,8 +639,8 @@ final class JavaScriptMinifier implements \Stringable
         // if a regex following `)` is not followed by `.<property or method>`,
         // it's quite likely not a regex
         $before = '\)\s*';
-        $after  = '(?=\s*\.(' . implode( '|', $propertiesAndMethods ) . '))';
-        $this->registerPattern( '/' . $before . '\K' . $pattern . $after . '/', $callback );
+        $after  = '(?=\s*\.('.\implode( '|', $propertiesAndMethods ).'))';
+        $this->registerPattern( '/'.$before.'\K'.$pattern.$after.'/', $callback );
 
         // 1 more edge case: a regex can be followed by a lot more operators or
         // keywords if there's a newline (ASI) in between, where the operator
@@ -641,8 +648,8 @@ final class JavaScriptMinifier implements \Stringable
         // (https://github.com/matthiasmullie/minify/issues/56)
         $operators = $this->getOperatorsForRegex( $this::operatorsBefore );
         $operators += $this->getOperatorsForRegex( $this::keywordsReserved );
-        $after     = '(?=\s*\n\s*(' . implode( '|', $operators ) . '))';
-        $this->registerPattern( '/' . $pattern . $after . '/', $callback );
+        $after = '(?=\s*\n\s*('.\implode( '|', $operators ).'))';
+        $this->registerPattern( '/'.$pattern.$after.'/', $callback );
 
         Clerk::stop( __METHOD__ );
     }
@@ -653,44 +660,44 @@ final class JavaScriptMinifier implements \Stringable
      * If $replacement is a string, it must be plain text. Placeholders like $1 or \2 don't work.
      * If you need that functionality, use a callback instead.
      *
-     * @param string           $pattern      PCRE pattern
-     * @param callable|string  $replacement  Replacement value for matched pattern
+     * @param string          $pattern     PCRE pattern
+     * @param callable|string $replacement Replacement value for matched pattern
      */
-    final protected function registerPattern( string $pattern, callable | string $replacement = '' ) : void
+    final protected function registerPattern( string $pattern, callable|string $replacement = '' ) : void
     {
         // study the pattern, we'll execute it more than once
         $pattern .= 'S';
 
-        $this->patterns[] = [ $pattern, $replacement ];
+        $this->patterns[] = [$pattern, $replacement];
     }
 
     /**
      * We'll strip whitespace around certain operators with regular expressions.
      * This will prepare the given array by escaping all characters.
      *
-     * @param string[]  $operators
-     * @param string    $delimiter
+     * @param string[] $operators
+     * @param string   $delimiter
      *
      * @return string[]
      */
     protected function getOperatorsForRegex( array $operators, string $delimiter = '/' ) : array
     {
         // escape operators for use in regex
-        $delimiters = array_fill( 0, count( $operators ), $delimiter );
-        $escaped    = array_map( 'preg_quote', $operators, $delimiters );
+        $delimiters = \array_fill( 0, \count( $operators ), $delimiter );
+        $escaped    = \array_map( 'preg_quote', $operators, $delimiters );
 
-        $operators = array_combine( $operators, $escaped );
+        $operators = \array_combine( $operators, $escaped );
 
         // ignore + & - for now, they'll get special treatment
-        unset( $operators[ '+' ], $operators[ '-' ] );
+        unset( $operators['+'], $operators['-'] );
 
         // dot can not just immediately follow a number; it can be confused for
         // decimal point, or calling a method on it, e.g. 42 .toString()
-        $operators[ '.' ] = '(?<![0-9]\s)\.';
+        $operators['.'] = '(?<![0-9]\s)\.';
 
         // don't confuse = with other assignment shortcuts (e.g. +=)
-        $chars            = preg_quote( '+-*\=<>%&|', $delimiter );
-        $operators[ '=' ] = '(?<![' . $chars . '])\=';
+        $chars          = \preg_quote( '+-*\=<>%&|', $delimiter );
+        $operators['='] = '(?<!['.$chars.'])\=';
 
         return $operators;
     }
@@ -699,28 +706,27 @@ final class JavaScriptMinifier implements \Stringable
      * We'll strip whitespace around certain keywords with regular expressions.
      * This will prepare the given array by escaping all characters.
      *
-     * @param string[]  $keywords
-     * @param string    $delimiter
+     * @param string[] $keywords
+     * @param string   $delimiter
      *
      * @return string[]
      */
     protected function getKeywordsForRegex( array $keywords, string $delimiter = '/' ) : array
     {
         // escape keywords for use in regex
-        $delimiter = array_fill( 0, count( $keywords ), $delimiter );
-        $escaped   = array_map( 'preg_quote', $keywords, $delimiter );
+        $delimiter = \array_fill( 0, \count( $keywords ), $delimiter );
+        $escaped   = \array_map( 'preg_quote', $keywords, $delimiter );
 
         // add word boundaries
-        array_walk(
-                $keywords, function( $value )
-        {
-            return '\b' . $value . '\b';
-        },
+        \array_walk(
+            $keywords,
+            function( $value ) {
+                return '\b'.$value.'\b';
+            },
         );
 
         return \array_combine( $keywords, $escaped );
     }
-
 
     // :: COMMENTS :::
 
@@ -744,38 +750,40 @@ final class JavaScriptMinifier implements \Stringable
     {
         // First extract comments we want to keep, so they can be restored later
         // PHP only supports $this inside anonymous functions since 5.4
-        $callback = function( $match )
-        {
-            $count                           = count( $this->extracted );
-            $placeholder                     = '/*' . $count . '*/';
-            $this->extracted[ $placeholder ] = $match[ 0 ];
+        $callback = function( $match ) {
+            $count                         = \count( $this->extracted );
+            $placeholder                   = '/*'.$count.'*/';
+            $this->extracted[$placeholder] = $match[0];
 
             return $placeholder;
         };
         $this->registerPattern(
-                '/
-            # optional newline
-            \n?
+            <<<'EOD'
+                /
+                            # optional newline
+                            \n?
 
-            # start comment
-            \/\*
+                            # start comment
+                            \/\*
 
-            # comment content
-            (?:
-                # either starts with an !
-                !
-            |
-                # or, after some number of characters which do not end the comment
-                (?:(?!\*\/).)*?
+                            # comment content
+                            (?:
+                                # either starts with an !
+                                !
+                            |
+                                # or, after some number of characters which do not end the comment
+                                (?:(?!\*\/).)*?
 
-                # there is either a @license or @preserve tag
-                @(?:license|preserve)
-            )
+                                # there is either a @license or @preserve tag
+                                @(?:license|preserve)
+                            )
 
-            # then match to the end of the comment
-            .*?\*\/\n?
+                            # then match to the end of the comment
+                            .*?\*\/\n?
 
-            /ixs', $callback,
+                            /ixs
+                EOD,
+            $callback,
         );
 
         // Then strip all other comments
@@ -794,7 +802,7 @@ final class JavaScriptMinifier implements \Stringable
      * Because it's sometimes hard to tell if a newline is part of a statement
      * that should be terminated or not, we'll just leave some of them alone.
      *
-     * @param string  $content  The content to strip the whitespace for
+     * @param string $content The content to strip the whitespace for
      *
      * @return string
      * @noinspection
@@ -802,16 +810,16 @@ final class JavaScriptMinifier implements \Stringable
     protected function stripWhitespace( string $content ) : string
     {
         // uniform line endings, make them all line feed
-        $content = str_replace( [ "\r\n", "\r" ], "\n", $content );
+        $content = \str_replace( ["\r\n", "\r"], "\n", $content );
 
         // collapse all non-line feed whitespace into a single space
-        $content = preg_replace( '/[^\S\n]+/', ' ', $content );
+        $content = \preg_replace( '/[^\S\n]+/', ' ', $content );
 
         // strip leading & trailing whitespace
-        $content = str_replace( [ " \n", "\n " ], "\n", $content );
+        $content = \str_replace( [" \n", "\n "], "\n", $content );
 
         // collapse consecutive line feeds into just 1
-        $content = preg_replace( '/\n+/', "\n", $content );
+        $content = \preg_replace( '/\n+/', "\n", $content );
 
         $operatorsBefore = $this->getOperatorsForRegex( $this::operatorsBefore );
         $operatorsAfter  = $this->getOperatorsForRegex( $this::operatorsAfter );
@@ -821,29 +829,29 @@ final class JavaScriptMinifier implements \Stringable
 
         // strip whitespace that ends in (or next line begin with) an operator
         // that allows statements to be broken up over multiple lines
-        unset( $operatorsBefore[ '+' ], $operatorsBefore[ '-' ], $operatorsAfter[ '+' ], $operatorsAfter[ '-' ] );
-        $content = preg_replace(
-                [
-                        '/(' . implode( '|', $operatorsBefore ) . ')\s+/',
-                        '/\s+(' . implode( '|', $operatorsAfter ) . ')/',
-                ],
-                '\\1',
-                $content,
+        unset( $operatorsBefore['+'], $operatorsBefore['-'], $operatorsAfter['+'], $operatorsAfter['-'] );
+        $content = \preg_replace(
+            [
+                '/('.\implode( '|', $operatorsBefore ).')\s+/',
+                '/\s+('.\implode( '|', $operatorsAfter ).')/',
+            ],
+            '\\1',
+            $content,
         );
 
         // make sure + and - can't be mistaken for, or joined into ++ and --
-        $content = preg_replace(
-                [
-                        '/(?<![\+\-])\s*([\+\-])(?![\+\-])/',
-                        '/(?<![\+\-])([\+\-])\s*(?![\+\-])/',
-                ],
-                '\\1',
-                $content,
+        $content = \preg_replace(
+            [
+                '/(?<![\+\-])\s*([\+\-])(?![\+\-])/',
+                '/(?<![\+\-])([\+\-])\s*(?![\+\-])/',
+            ],
+            '\\1',
+            $content,
         );
 
         // collapse whitespace around reserved words into single space
-        $content = preg_replace( '/(^|[;\}\s])\K(' . implode( '|', $keywordsBefore ) . ')\s+/', '\\2 ', $content );
-        $content = preg_replace( '/\s+(' . implode( '|', $keywordsAfter ) . ')(?=([;\{\s]|$))/', ' \\1', $content );
+        $content = \preg_replace( '/(^|[;\}\s])\K('.\implode( '|', $keywordsBefore ).')\s+/', '\\2 ', $content );
+        $content = \preg_replace( '/\s+('.\implode( '|', $keywordsAfter ).')(?=([;\{\s]|$))/', ' \\1', $content );
 
         /*
          * We didn't strip whitespace after a couple of operators because they
@@ -851,13 +859,17 @@ final class JavaScriptMinifier implements \Stringable
          * strip the newlines. However, we can safely strip any non-line feed
          * whitespace that follows them.
          */
-        $operatorsDiffBefore = array_diff( $operators, $operatorsBefore );
-        $operatorsDiffAfter  = array_diff( $operators, $operatorsAfter );
-        $content             = preg_replace(
-                '/(' . implode( '|', $operatorsDiffBefore ) . ')[^\S\n]+/', '\\1', $content,
+        $operatorsDiffBefore = \array_diff( $operators, $operatorsBefore );
+        $operatorsDiffAfter  = \array_diff( $operators, $operatorsAfter );
+        $content             = \preg_replace(
+            '/('.\implode( '|', $operatorsDiffBefore ).')[^\S\n]+/',
+            '\\1',
+            $content,
         );
-        $content             = preg_replace(
-                '/[^\S\n]+(' . implode( '|', $operatorsDiffAfter ) . ')/', '\\1', $content,
+        $content = \preg_replace(
+            '/[^\S\n]+('.\implode( '|', $operatorsDiffAfter ).')/',
+            '\\1',
+            $content,
         );
 
         /*
@@ -866,9 +878,9 @@ final class JavaScriptMinifier implements \Stringable
          * Same for whitespace in between `)` and `{`, or between `{` and some
          * keywords.
          */
-        $content = preg_replace( '/\breturn\s+(["\'\/\+\-])/', 'return$1', $content );
-        $content = preg_replace( '/\)\s+\{/', '){', $content );
-        $content = preg_replace( '/}\n(else|catch|finally)\b/', '}$1', $content );
+        $content = \preg_replace( '/\breturn\s+(["\'\/\+\-])/', 'return$1', $content );
+        $content = \preg_replace( '/\)\s+\{/', '){', $content );
+        $content = \preg_replace( '/}\n(else|catch|finally)\b/', '}$1', $content );
 
         /*
          * Get rid of double semicolons, except where they can be used like:
@@ -877,9 +889,9 @@ final class JavaScriptMinifier implements \Stringable
          * temporarily replacing them with an invalid condition: they won't have
          * a double semicolon and will be easy to spot to restore afterwards.
          */
-        $content = preg_replace( '/\bfor\(([^;]*);;([^;]*)\)/', 'for(\\1;-;\\2)', $content );
-        $content = preg_replace( '/;+/', ';', $content );
-        $content = preg_replace( '/\bfor\(([^;]*);-;([^;]*)\)/', 'for(\\1;;\\2)', $content );
+        $content = \preg_replace( '/\bfor\(([^;]*);;([^;]*)\)/', 'for(\\1;-;\\2)', $content );
+        $content = \preg_replace( '/;+/', ';', $content );
+        $content = \preg_replace( '/\bfor\(([^;]*);-;([^;]*)\)/', 'for(\\1;;\\2)', $content );
 
         /*
          * Next, we'll be removing all semicolons where ASI kicks in.
@@ -900,23 +912,24 @@ final class JavaScriptMinifier implements \Stringable
          * REGEX throwing catastrophic backtracking: $content = preg_replace('/(for\([^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*;[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*;[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*\));(\}|$)/s', '\\1;;\\8', $content);
          */
         $content = \preg_replace(
-                '/(for\((?:[^;\{]*|[^;\{]*function[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*);[^;\{]*;[^;\{]*\));(\}|$)/',
-                '\\1;;\\4', $content,
+            '/(for\((?:[^;\{]*|[^;\{]*function[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*);[^;\{]*;[^;\{]*\));(\}|$)/',
+            '\\1;;\\4',
+            $content,
         );
         $content = \preg_replace(
-                '/(for\([^;\{]*;(?:[^;\{]*|[^;\{]*function[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*);[^;\{]*\));(\}|$)/',
-                '\\1;;\\4', $content,
+            '/(for\([^;\{]*;(?:[^;\{]*|[^;\{]*function[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*);[^;\{]*\));(\}|$)/',
+            '\\1;;\\4',
+            $content,
         );
         $content = \preg_replace(
-                '/(for\([^;\{]*;[^;\{]*;(?:[^;\{]*|[^;\{]*function[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*)\));(\}|$)/',
-                '\\1;;\\4', $content,
+            '/(for\([^;\{]*;[^;\{]*;(?:[^;\{]*|[^;\{]*function[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*)\));(\}|$)/',
+            '\\1;;\\4',
+            $content,
         );
 
         $content = \preg_replace( '/(for\([^;\{]+\s+in\s+[^;\{]+\));(\}|$)/', '\\1;;\\2', $content );
 
-        /*
-         * Do the same for the if's that don't have a body but are followed by ;}
-         */
+        // Do the same for the if's that don't have a body but are followed by ;}
         $content = \preg_replace( '/(\bif\s*\([^{;]*\));\}/', '\\1;;}', $content );
 
         /*
@@ -950,25 +963,24 @@ final class JavaScriptMinifier implements \Stringable
         return \trim( $content );
     }
 
-
     // ::: UTILITY :::
 
     /**
      * @see https://github.com/matthiasmullie/minify/pull/139
      *
-     * @param string  $string
+     * @param string $string
      *
      * @return string
      */
     final protected function normalizeLinefeeds( string $string ) : string
     {
-        return \str_replace( [ "\r\n", "\r" ], "\n", $string );
+        return \str_replace( ["\r\n", "\r"], "\n", $string );
     }
 
     /**
      * Check if the path is a regular file and can be read.
      *
-     * @param string  $path
+     * @param string $path
      *
      * @return bool
      */
@@ -976,10 +988,10 @@ final class JavaScriptMinifier implements \Stringable
     {
         $parsed = \parse_url( $path );
         if (
-                // file is elsewhere
-                isset( $parsed[ 'host' ] )
-                // file responds to queries (may change, or need to bypass cache)
-                || isset( $parsed[ 'query' ] )
+            // file is elsewhere
+            isset( $parsed['host'] )
+            // file responds to queries (may change, or need to bypass cache)
+            || isset( $parsed['query'] )
         ) {
             return false;
         }
@@ -987,8 +999,8 @@ final class JavaScriptMinifier implements \Stringable
         try {
             return \strlen( $path ) < PHP_MAXPATHLEN && @\is_file( $path ) && \is_readable( $path );
         }
-            // catch openbasedir exceptions which are not caught by @ on is_file()
-        catch ( \Exception $e ) {
+        // catch openbasedir exceptions which are not caught by @ on is_file()
+        catch ( Exception $e ) {
             return false;
         }
     }

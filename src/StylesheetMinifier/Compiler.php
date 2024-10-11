@@ -5,24 +5,20 @@ declare(strict_types=1);
 namespace Northrook\StylesheetMinifier;
 
 use LogicException;
-use Northrook\{Clerk, StylesheetMinifier\Syntax\Block, StylesheetMinifier\Syntax\Statement};
-use Northrook\StylesheetMinifier\Syntax\{Rule};
+use Northrook\{Clerk, StylesheetMinifier};
+use Northrook\StylesheetMinifier\Syntax\{Block, Rule, Statement};
 use Psr\Log\LoggerInterface;
-use Support\Num;
 use function String\hashKey;
 
 /**
+ * @internal
  * @author Martin Nielsen <mn@northrook.com>
  */
-class Compiler
+final class Compiler
 {
     private array $enqueued = [];
 
     private array $ast = [];
-
-    private readonly int $initialSizeBytes;
-
-    private int $compiledSizeBytes;
 
     protected array $rules
         = [
@@ -40,34 +36,33 @@ class Compiler
         private readonly ?LoggerInterface $logger = null,
         private readonly bool             $strict = false,
     ) {
-        Clerk::event( $this::class, 'document' );
-        $this->ingestSources( (array) $source );
-        //      ->parseEnqueued();
+        Clerk::event( $this::class, StylesheetMinifier::CLERK_GROUP );
+        $this->ingestSources( $source );
     }
 
     final public function generateStylesheet() : self
     {
-        Clerk::event( __METHOD__, 'document' );
+        $profiler   = Clerk::event( __METHOD__, StylesheetMinifier::CLERK_GROUP );
         $stylesheet = new Assembler( $this->rules );
 
         $stylesheet->build();
 
-        $this->css = $stylesheet->toString();
+        $this->css ??= $stylesheet->toString();
 
-        $this->compiledSizeBytes = \strlen( $this->css );
-
-        $this->compressionReport( 'Complete: Compiler' );
+        $profiler->stop();
         return $this;
     }
 
     final public function parseEnqueued() : self
     {
-        Clerk::event( __METHOD__, 'document' );
+        $profiler = Clerk::event( __METHOD__, StylesheetMinifier::CLERK_GROUP );
 
         foreach ( $this->enqueued as $key => $css ) {
+            $profiler->lap();
             $this->ast[$key] = ( new Parser( $css, $key ) )->rules();
         }
 
+        $profiler->stop();
         return $this;
     }
 
@@ -103,7 +98,7 @@ class Compiler
 
     final public function mergeRules() : self
     {
-        Clerk::event( __METHOD__, 'document' );
+        Clerk::event( __METHOD__, StylesheetMinifier::CLERK_GROUP );
 
         // dd($this);
         // Loop through each provided sources' compiled AST
@@ -221,15 +216,16 @@ class Compiler
         }
     }
 
-    private function ingestSources( array $source ) : self
+    private function ingestSources( string|array $source ) : self
     {
-        $initial  = 0;
-        $minified = 0;
+        $profiler = Clerk::event( __METHOD__, StylesheetMinifier::CLERK_GROUP );
+
+        $source = \is_string( $source ) ? [$source] : $source;
 
         foreach ( $source as $index => $string ) {
-            $initial += \strlen( $string );
-            $stylesheet = $this::minify( $string );
 
+            $profiler->lap();
+            $stylesheet = $this::minify( $string );
             if ( ! $stylesheet ) {
                 $this->logger?->notice(
                     'The {key} stylesheet is empty after minification.',
@@ -239,38 +235,13 @@ class Compiler
                 continue;
             }
 
-            $minified += \strlen( $stylesheet );
-
             $this->enqueued[$index] = $stylesheet;
+
         }
 
-        $this->initialSizeBytes  = $initial;
-        $this->compiledSizeBytes = $minified;
-
-        $this->compressionReport( 'Construct: Sources' );
+        $profiler->stop();
 
         return $this;
-    }
-
-    private function compressionReport( ?string $message = null ) : void
-    {
-        if ( ! $this->logger ) {
-            return;
-        }
-
-        $differenceKb = $this->initialSizeBytes - $this->compiledSizeBytes;
-
-        $differenceKb      = $this->initialSizeBytes - $this->compiledSizeBytes;
-        $differencePercent = Num::percentDifference( $this->initialSizeBytes, $this->compiledSizeBytes );
-        $this->logger->info(
-            message : ( $message ?? 'Stylesheet' ).' minified {percent}, from {from} to {to} saving {diff},',
-            context : [
-                'from'    => "{$this->initialSizeBytes}KB",
-                'to'      => "{$this->compiledSizeBytes}KB",
-                'diff'    => "{$differenceKb}KB",
-                'percent' => "{$differencePercent}%",
-            ],
-        );
     }
 
     /**

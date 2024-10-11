@@ -18,6 +18,8 @@ final class StylesheetMinifier extends Minify
 {
     protected const ?string EXTENSION = 'css';
 
+    public const string CLERK_GROUP = 'minify_css';
+
     private readonly Compiler $compiler;
 
     /**
@@ -28,9 +30,9 @@ final class StylesheetMinifier extends Minify
         array                               $sources = [],
         protected readonly ?LoggerInterface $logger = null,
     ) {
-        Clerk::event( $this::class, 'document' );
+        Clerk::event( $this::class, $this::CLERK_GROUP );
         $this->addSource( ...$sources );
-        Clerk::event( $this::class.'::initialized', 'document' );
+        Clerk::event( $this::class.'::initialized', $this::CLERK_GROUP );
     }
 
     /**
