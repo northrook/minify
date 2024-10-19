@@ -51,18 +51,26 @@ final class Rule
                 throw new CompileException( 'Error parsing Stylesheet', $exploded );
             }
 
+            $declaration = \str_replace( '\:', '≡', $declaration );
+
+            // dump($declaration);
             [$selector, $value] = \explode( ':', $declaration );
+
+            // dump($selector, $value);
 
             $value = Str::replaceEach(
                 [
                     '0.' => '.',
+                    '≡'  => '\:',
                 ],
                 $value,
             );
 
+            $selector                = \str_replace( '≡', '\:', $selector );
             $declarations[$selector] = $value;
         }
 
+        // dump( $declarations );
         $this->declarations = $declarations;
     }
 
