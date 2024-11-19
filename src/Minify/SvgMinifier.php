@@ -23,19 +23,23 @@ final class SvgMinifier extends Minify
 {
     public bool $preserveXmlNamespace = false;
 
-    protected function minifyString() : void {
-        $this->trimHtmlComments()
-             ->trimWhitespace()
-             ->trimXmlNamespace();
-    }
-
-    private function trimXmlNamespace() : SvgMinifier {
-        $this->string = preg_replace(
-            pattern     : '#(<svg[^>]*?)\s+xmlns="[^"]*"#',
-            replacement : '$1',
-            subject     : $this->string,
-        );
-
-        return $this;
+    // protected function minifyString() : void {
+    //     $this->trimHtmlComments()
+    //          ->trimWhitespace()
+    //          ->trimXmlNamespace();
+    // }
+    //
+    // private function trimXmlNamespace() : SvgMinifier {
+    //     $this->string = preg_replace(
+    //         pattern     : '#(<svg[^>]*?)\s+xmlns="[^"]*"#',
+    //         replacement : '$1',
+    //         subject     : $this->string,
+    //     );
+    //
+    //     return $this;
+    // }
+    protected function compile( array $sources ) : string
+    {
+        return \implode( '', $sources );
     }
 }

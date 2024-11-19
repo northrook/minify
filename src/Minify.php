@@ -2,19 +2,21 @@
 
 namespace Northrook;
 
-use Northrook\Exception\E_Value;
-use Northrook\Filesystem\Resource;
-use Northrook\Resource\{Path, URL};
-use Support\Num;
-use Northrook\Trait\PrintableClass;
-use function String\{hashKey, sourceKey};
+use Northrook\Filesystem\Path;
+use Northrook\Filesystem\Reference;
+use Northrook\Filesystem\URL;
+use Northrook\Logger\Log;
 use RuntimeException;
+use Interface\Printable;
+use Interface\PrintableClass;
+use Support\Num;
+use function String\{hashKey, sourceKey};
 use function Support\classBasename;
 
 /**
  * @author Martin Nielsen <mn@northrook.com>
  */
-abstract class Minify
+abstract class Minify implements Printable
 {
     use PrintableClass;
 
@@ -29,16 +31,16 @@ abstract class Minify
      * - Includes the following line break
      */
     public const array REGEX_PATTERN
-        = [
-            'trimDocblockComments' => '#^\h*?/\*\*.*?\*/\R*#ms',  // PHP block comments
-            'trimSingleComments'   => '#\h*?//.+?\R*#m',         // Single line comments
-            'trimBlockComments'    => '#\h*?/\*.*?\*/\R*#ms',    // Block comments
-            'trimCssComments'      => '#\h*?/\*.*?\*/\R*#ms',    // StylesheetMinifier comments
-            'trimHtmlComments'     => '#^\h*?<!--.*?-->\R*#ms',   // HTML comments
-            'trimLatteComments'    => '#^\h*?{\*.*?\*}\R*#ms',    // Latte comments
-            'trimTwigComments'     => '/^\h*?{#.*?#}\R*/ms',      // Twig comments
-            'trimBladeComments'    => '#^\h*?{{--.*?--}}\R*#ms',  // Blade comments
-        ];
+            = [
+                    'trimDocblockComments' => '#^\h*?/\*\*.*?\*/\R*#ms',  // PHP block comments
+                    'trimSingleComments'   => '#\h*?//.+?\R*#m',         // Single line comments
+                    'trimBlockComments'    => '#\h*?/\*.*?\*/\R*#ms',    // Block comments
+                    'trimCssComments'      => '#\h*?/\*.*?\*/\R*#ms',    // StylesheetMinifier comments
+                    'trimHtmlComments'     => '#^\h*?<!--.*?-->\R*#ms',   // HTML comments
+                    'trimLatteComments'    => '#^\h*?{\*.*?\*}\R*#ms',    // Latte comments
+                    'trimTwigComments'     => '/^\h*?{#.*?#}\R*/ms',      // Twig comments
+                    'trimBladeComments'    => '#^\h*?{{--.*?--}}\R*#ms',  // Blade comments
+            ];
 
     private float $initialSizeKb;
 
@@ -56,6 +58,11 @@ abstract class Minify
 
     abstract protected function compile( array $sources ) : string;
 
+    public function __toString() : string
+    {
+        return $this->minify();
+    }
+
     final public function minify() : string
     {
         // Profiler
@@ -65,7 +72,7 @@ abstract class Minify
         $this->locked = true;
 
         if ( null === $this::EXTENSION ) {
-            throw new RuntimeException( 'The '.__CLASS__.'::EXTENSION must be defined.' );
+            throw new RuntimeException( 'The ' . __CLASS__ . '::EXTENSION must be defined.' );
         }
 
         $compiled = $this->compile( $this->sources() );
@@ -94,18 +101,18 @@ abstract class Minify
 
         foreach ( $this->parseSources( $this->sources ) as $key => $source ) {
             $content = $source instanceof Path ? $source->read : $source;
-            if ( ! $content ) {
+            if ( !$content ) {
                 continue;
             }
             $this->initialSizeKb += \mb_strlen( $content, 'UTF-8' );
-            $sources[$key] = $content;
+            $sources[ $key ]     = $content;
         }
 
         return $sources;
     }
 
     /**
-     * @param array<string, array|resource|string> $sources
+     * @param array<string, array|resource|string>  $sources
      *
      * @return array<string, Path|string>
      */
@@ -115,33 +122,33 @@ abstract class Minify
 
         foreach ( $sources as $source ) {
             if ( \is_array( $source ) ) {
-                $array = [...$array, ...$this->parseSources( $source )];
+                $array = [ ...$array, ...$this->parseSources( $source ) ];
 
                 continue;
             }
 
             // If the $source contains brackets, assume it is a raw CSS string
             if ( \is_string( $source ) && ( \str_contains( $source, '{' ) && \str_contains( $source, '}' ) ) ) {
-                $array['raw:'.hashKey( $source )] ??= $source;
+                $array[ 'raw:' . hashKey( $source ) ] ??= $source;
 
                 continue;
             }
 
-            $resource = \is_string( $source ) ? Resource::from( $source ) : $source;
+            $resource = \is_string( $source ) ? Path::from( $source ) : $source;
 
-            if ( $resource instanceof URL && $resource->exists ) {
+            if ( $resource instanceof URL && $resource->exists() ) {
                 $externalContent = $resource->fetch();
                 if ( \is_string( $externalContent ) ) {
-                    $array['url:'.hashKey( $externalContent )] ??= $externalContent;
+                    $array[ 'url:' . hashKey( $externalContent ) ] ??= $externalContent;
                 }
                 else {
-                    E_Value::warning(
-                        '{minifier} was unable to process external source from URL {path}. The file was fetched, but appears empty.',
-                        [
-                            'minifier' => $this::class,
-                            'path'     => $resource->path,
-                            'resource' => $resource,
-                        ],
+                    Log::warning(
+                            '{minifier} was unable to process external source from URL {path}. The file was fetched, but appears empty.',
+                            [
+                                    'minifier' => $this::class,
+                                    'path'     => (string) $resource,
+                                    'resource' => $resource,
+                            ],
                     );
                 }
 
@@ -152,7 +159,7 @@ abstract class Minify
 
             // If the source is a valid, readable path, add it
             if ( $this::EXTENSION === $resource->extension && $resource->isReadable ) {
-                $array["{$resource->extension}:".sourceKey( $resource )] ??= $resource;
+                $array[ "{$resource->extension}:" . sourceKey( $resource ) ] ??= $resource;
 
                 continue;
             }
@@ -166,16 +173,16 @@ abstract class Minify
      * - Returns a formatted string by default.
      * - Can return an array of initialKb, minifiedKb, differenceKb, differencePercent
      *
-     * @param bool $getData
+     * @param bool  $getData
      *
      * @return array|string
      */
-    final public function report( bool $getData = false ) : string|array
+    final public function report( bool $getData = false ) : string | array
     {
         $minifier = classBasename( $this::class );
 
-        if ( ! isset( $this->minifiedSizeKb ) ) {
-            return "{$minifier} has not been compiled yet. Please run the ".$this::class.'->minify() method first.';
+        if ( !isset( $this->minifiedSizeKb ) ) {
+            return "{$minifier} has not been compiled yet. Please run the " . $this::class . '->minify() method first.';
         }
 
         $this->initialSizeKb  = (float) Num::byteSize( $this->initialSizeKb );
@@ -186,10 +193,10 @@ abstract class Minify
 
         if ( $getData ) {
             return [
-                'initialKb'         => $this->initialSizeKb,
-                'minifiedKb'        => $this->minifiedSizeKb,
-                'differenceKb'      => $differenceKb,
-                'differencePercent' => $differencePercent,
+                    'initialKb'         => $this->initialSizeKb,
+                    'minifiedKb'        => $this->minifiedSizeKb,
+                    'differenceKb'      => $differenceKb,
+                    'differencePercent' => $differencePercent,
             ];
         }
 

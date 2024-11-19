@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace Northrook;
 
 use LogicException;
-use Northrook\Filesystem\Resource;
-use Northrook\Resource\Path;
+use Northrook\Filesystem\{Path};
 use Northrook\StylesheetMinifier\Compiler;
 use Psr\Log\LoggerInterface;
 use function String\{hashKey, sourceKey};
@@ -40,11 +39,11 @@ final class StylesheetMinifier extends Minify
      *
      * Accepts raw CSS, or a path to a CSS file.
      *
-     * @param resource|string ...$add
+     * @param Path|string ...$add
      *
      * @return $this
      */
-    final public function addSource( string|Resource ...$add ) : self
+    final public function addSource( string|Path ...$add ) : self
     {
         // TODO : [low] Support URL
 

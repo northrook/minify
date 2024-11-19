@@ -2,12 +2,11 @@
 
 namespace Northrook\Minify;
 
+use Interface\Printable;
+use Interface\PrintableClass;
 use JetBrains\PhpStorm\Language;
-use Northrook\HTML\Element\Tag;
 use Northrook\HTML\HtmlNode;
-use Northrook\Interface\Printable;
 use Northrook\Minify;
-use Northrook\Trait\PrintableClass;
 use const Support\EMPTY_STRING;
 
 final class HtmlMinifier implements Printable

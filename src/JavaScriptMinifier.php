@@ -140,14 +140,14 @@ final class JavaScriptMinifier implements Stringable
                 continue;
             }
 
-            if ( (bool) \preg_match( '#^\w+?\..{2}#m', $line ) ) {
+            if ( \preg_match( '#^\w+?\..{2}#m', $line ) ) {
                 // dump( $line );
                 $string .= "{$line};";
 
                 continue;
             }
 
-            if ( (bool) \preg_match( '#^\w+?=.{2}#m', $line ) ) {
+            if ( \preg_match( '#^\w+?=.{2}#m', $line ) ) {
                 $string .= "{$line};";
 
                 continue;
@@ -168,7 +168,7 @@ final class JavaScriptMinifier implements Stringable
             }
 
             if (
-                (bool) \preg_match( '#^[\w\s\.=]+?$#m', $line )
+                \preg_match( '#^[\w\s\.=]+?$#m', $line )
                 && ! Str::startsWith( $nextLine, ['{', '('] )
             ) {
                 // dump( $nextLine );
@@ -762,10 +762,10 @@ final class JavaScriptMinifier implements Stringable
                 /
                             # optional newline
                             \n?
-
+                    
                             # start comment
                             \/\*
-
+                    
                             # comment content
                             (?:
                                 # either starts with an !
@@ -773,14 +773,14 @@ final class JavaScriptMinifier implements Stringable
                             |
                                 # or, after some number of characters which do not end the comment
                                 (?:(?!\*\/).)*?
-
+                    
                                 # there is either a @license or @preserve tag
                                 @(?:license|preserve)
                             )
-
+                    
                             # then match to the end of the comment
                             .*?\*\/\n?
-
+                    
                             /ixs
                 EOD,
             $callback,
@@ -910,7 +910,9 @@ final class JavaScriptMinifier implements Stringable
          * The limitation is that it will not allow closures in more than one
          * of the three parts for a specific for() case.
          * REGEX throwing catastrophic backtracking: $content = preg_replace('/(for\([^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*;[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*;[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*\));(\}|$)/s', '\\1;;\\8', $content);
+         *
          */
+
         $content = \preg_replace(
             '/(for\((?:[^;\{]*|[^;\{]*function[^;\{]*(\{([^\{\}]*(?-2))*[^\{\}]*\})?[^;\{]*);[^;\{]*;[^;\{]*\));(\}|$)/',
             '\\1;;\\4',

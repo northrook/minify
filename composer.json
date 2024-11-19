@@ -19,9 +19,7 @@
   "require": {
     "php": ">=8.3",
     "ext-dom": "*",
-    "northrook/core": "dev-main",
     "northrook/html": "dev-main",
-    "northrook/html-element": "dev-main",
     "northrook/clerk": "dev-main"
   },
   "require-dev": {
