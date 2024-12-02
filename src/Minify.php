@@ -80,7 +80,7 @@ abstract class Minify implements Printable
 
         Clerk::stopGroup( static::CLERK_GROUP );
 
-        dump( $this->report() );
+        // dump( $this->report() );
         return $compiled;
     }
 
