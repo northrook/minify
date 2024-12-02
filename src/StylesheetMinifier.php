@@ -8,6 +8,7 @@ use LogicException;
 use Northrook\Filesystem\{Path};
 use Northrook\StylesheetMinifier\Compiler;
 use Psr\Log\LoggerInterface;
+use Support\FileInfo;
 use function String\{hashKey, sourceKey};
 
 /**
@@ -39,11 +40,11 @@ final class StylesheetMinifier extends Minify
      *
      * Accepts raw CSS, or a path to a CSS file.
      *
-     * @param Path|string ...$add
+     * @param string ...$add
      *
      * @return $this
      */
-    final public function addSource( string|Path ...$add ) : self
+    final public function addSource( string ...$add ) : self
     {
         // TODO : [low] Support URL
 
@@ -60,17 +61,17 @@ final class StylesheetMinifier extends Minify
             }
 
             // If the $source contains brackets, assume it is a raw CSS string
-            if ( \is_string( $source ) && ( \str_contains( $source, '{' ) && \str_contains( $source, '}' ) ) ) {
+            if ( ( \str_contains( $source, '{' ) && \str_contains( $source, '}' ) ) ) {
                 $this->sources['raw:'.hashKey( $source )] ??= $source;
 
                 continue;
             }
 
-            $path = $source instanceof Path ? $source : new Path( $source );
+            $path = new FileInfo( $source );
 
             // If the source is a valid, readable path, add it
-            if ( 'css' === $path->extension && $path->isReadable ) {
-                $this->sources["{$path->extension}:".sourceKey( $path )] ??= $path;
+            if ( 'css' === $path->getExtension() && $path->isReadable() ) {
+                $this->sources["{$path->getExtension()}:".sourceKey( $path )] ??= $path;
 
                 continue;
             }

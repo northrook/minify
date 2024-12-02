@@ -2,13 +2,10 @@
 
 namespace Northrook;
 
-use Northrook\Filesystem\Path;
-use Northrook\Filesystem\Reference;
-use Northrook\Filesystem\URL;
-use Northrook\Logger\Log;
 use RuntimeException;
 use Interface\Printable;
 use Interface\PrintableClass;
+use Support\FileInfo;
 use Support\Num;
 use function String\{hashKey, sourceKey};
 use function Support\classBasename;
@@ -46,7 +43,7 @@ abstract class Minify implements Printable
 
     private float $minifiedSizeKb;
 
-    /** @var array<string, array|resource|string> */
+    /** @var array<string, array|resource|string|\Support\FileInfo> */
     protected array $sources = [];
 
     protected bool $locked = false;
@@ -100,7 +97,7 @@ abstract class Minify implements Printable
         $sources             = [];
 
         foreach ( $this->parseSources( $this->sources ) as $key => $source ) {
-            $content = $source instanceof Path ? $source->read : $source;
+            $content = $source instanceof FileInfo ? $source->getContents() : $source;
             if ( !$content ) {
                 continue;
             }
@@ -112,9 +109,9 @@ abstract class Minify implements Printable
     }
 
     /**
-     * @param array<string, array|resource|string>  $sources
+     * @param array<string, array|resource|string|FileInfo>  $sources
      *
-     * @return array<string, Path|string>
+     * @return array<string, FileInfo|string>
      */
     private function parseSources( array $sources = [] ) : array
     {
@@ -134,32 +131,33 @@ abstract class Minify implements Printable
                 continue;
             }
 
-            $resource = \is_string( $source ) ? Path::from( $source ) : $source;
+            $resource = \is_string( $source ) ? new FileInfo( $source ) : $source;
 
-            if ( $resource instanceof URL && $resource->exists() ) {
-                $externalContent = $resource->fetch();
-                if ( \is_string( $externalContent ) ) {
-                    $array[ 'url:' . hashKey( $externalContent ) ] ??= $externalContent;
-                }
-                else {
-                    Log::warning(
-                            '{minifier} was unable to process external source from URL {path}. The file was fetched, but appears empty.',
-                            [
-                                    'minifier' => $this::class,
-                                    'path'     => (string) $resource,
-                                    'resource' => $resource,
-                            ],
-                    );
-                }
+            // TODO : Handle URL
+            // if ( $resource instanceof URL && $resource->exists() ) {
+            //     $externalContent = $resource->fetch();
+            //     if ( \is_string( $externalContent ) ) {
+            //         $array[ 'url:' . hashKey( $externalContent ) ] ??= $externalContent;
+            //     }
+            //     else {
+            //         Log::warning(
+            //                 '{minifier} was unable to process external source from URL {path}. The file was fetched, but appears empty.',
+            //                 [
+            //                         'minifier' => $this::class,
+            //                         'path'     => (string) $resource,
+            //                         'resource' => $resource,
+            //                 ],
+            //         );
+            //     }
+            //
+            //     continue;
+            // }
 
-                continue;
-            }
-
-            \assert( $resource instanceof Path );
+            \assert( $resource instanceof FileInfo );
 
             // If the source is a valid, readable path, add it
-            if ( $this::EXTENSION === $resource->extension && $resource->isReadable ) {
-                $array[ "{$resource->extension}:" . sourceKey( $resource ) ] ??= $resource;
+            if ( $this::EXTENSION === $resource->getExtension() && $resource->isReadable() ) {
+                $array[ "{$resource->getExtension()}:" . sourceKey( $resource ) ] ??= $resource;
 
                 continue;
             }
