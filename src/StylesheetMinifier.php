@@ -9,12 +9,13 @@ use Northrook\Filesystem\{Path};
 use Northrook\StylesheetMinifier\Compiler;
 use Psr\Log\LoggerInterface;
 use Support\FileInfo;
+use Stringable;
 use function String\{hashKey, sourceKey};
 
 /**
  * @author Martin Nielsen <mn@northrook.com>
  */
-final class StylesheetMinifier extends Minify
+final class StylesheetMinifier extends Minify implements MinifierInterface
 {
     protected const ?string EXTENSION = 'css';
 
@@ -40,34 +41,34 @@ final class StylesheetMinifier extends Minify
      *
      * Accepts raw CSS, or a path to a CSS file.
      *
-     * @param string ...$add
+     * @param string|Stringable ...$source
      *
-     * @return $this
+     * @return self
      */
-    final public function addSource( string ...$add ) : self
+    public function addSource( string|Stringable ...$source ) : self
     {
         // TODO : [low] Support URL
 
         $this->throwIfLocked( 'Unable to add new source; locked by the build proccess.' );
 
-        foreach ( $add as $source ) {
-            if ( ! $source ) {
+        foreach ( $source as $data ) {
+            if ( ! $data ) {
                 $this->logger?->warning(
                     $this::class.' was provided an empty source string. It was not enqueued.',
-                    ['sources' => $add],
+                    ['sources' => $source],
                 );
 
                 continue;
             }
 
             // If the $source contains brackets, assume it is a raw CSS string
-            if ( ( \str_contains( $source, '{' ) && \str_contains( $source, '}' ) ) ) {
-                $this->sources['raw:'.hashKey( $source )] ??= $source;
+            if ( ( \str_contains( $data, '{' ) && \str_contains( $data, '}' ) ) ) {
+                $this->sources['raw:'.hashKey( $data )] ??= $data;
 
                 continue;
             }
 
-            $path = new FileInfo( $source );
+            $path = new FileInfo( $data );
 
             // If the source is a valid, readable path, add it
             if ( 'css' === $path->getExtension() && $path->isReadable() ) {

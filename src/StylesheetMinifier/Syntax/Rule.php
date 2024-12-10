@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Northrook\StylesheetMinifier\Syntax;
 
-use Northrook\Exception\CompileException;
 use Support\Str;
+use RuntimeException;
 
 /**
  * ```
@@ -48,7 +48,7 @@ final class Rule
 
         foreach ( $exploded as $declaration ) {
             if ( false === \str_contains( $declaration, ':' ) ) {
-                throw new CompileException( 'Error parsing Stylesheet', $exploded );
+                throw new RuntimeException( 'Error parsing Stylesheet: '.\print_r( $exploded, true ) );
             }
 
             $declaration = \str_replace( '\:', '≡', $declaration );

@@ -21,7 +21,7 @@ use Stringable;
  *
  * @license   MIT License
  */
-final class JavaScriptMinifier implements Stringable
+final class JavaScriptMinifier implements MinifierInterface
 {
     use MinifierTokens;
 
@@ -62,7 +62,7 @@ final class JavaScriptMinifier implements Stringable
     {
         $this->profilerGroup = $this::class.( $profilerTag ? "::{$profilerTag}" : null );
         Clerk::event( $this->profilerGroup, $this->profilerGroup );
-        \array_map( [$this, 'add'], (array) $source );
+        \array_map( [$this, 'addSource'], (array) $source );
     }
 
     public function __toString() : string
@@ -192,11 +192,11 @@ final class JavaScriptMinifier implements Stringable
     /**
      * Add a file or straight-up code to be minified.
      *
-     * @param string ...$sourcePath
+     * @param string|Stringable ...$source
      *
-     * @return static
+     * @return self
      */
-    public function add( string ...$sourcePath ) : static
+    public function addSource( string|Stringable ...$source ) : self
     {
         // bogus "usage" of parameter $data: scrutinizer warns this variable is
         // not used (we're using func_get_args instead to support overloading),
@@ -205,7 +205,7 @@ final class JavaScriptMinifier implements Stringable
         // $args = [ $data ] + func_get_args();
 
         // this method can be overloaded
-        foreach ( $sourcePath as $data ) {
+        foreach ( $source as $data ) {
             // load data
             $value = $this->load( $data );
             // dump( hashKey( $data ), hashKey( $value ) );
@@ -423,7 +423,7 @@ final class JavaScriptMinifier implements Stringable
          * regex implementation doesn't allow unfixed-length look-behind
          * assertions.
          */
-        \preg_match( '/(\[[^\]]+\])[^\]]*$/', static::REGEX, $previousChar );
+        \preg_match( '/(\[[^\]]+\])[^\]]*$/', self::REGEX, $previousChar );
         $previousChar = $previousChar[1];
 
         /*
