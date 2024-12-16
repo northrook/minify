@@ -62,13 +62,13 @@ final class StylesheetMinifier extends Minify implements MinifierInterface
             }
 
             // If the $source contains brackets, assume it is a raw CSS string
-            if ( ( \str_contains( $data, '{' ) && \str_contains( $data, '}' ) ) ) {
+            if ( \is_string( $data ) && ( \str_contains( $data, '{' ) && \str_contains( $data, '}' ) ) ) {
                 $this->sources['raw:'.hashKey( $data )] ??= $data;
 
                 continue;
             }
 
-            $path = new FileInfo( $data );
+            $path = $source instanceof FileInfo ? $data : new FileInfo( $data );
 
             // If the source is a valid, readable path, add it
             if ( 'css' === $path->getExtension() && $path->isReadable() ) {
