@@ -206,6 +206,8 @@ final class JavaScriptMinifier implements MinifierInterface
 
         // this method can be overloaded
         foreach ( $source as $data ) {
+            $data = (string) $data;
+
             // load data
             $value = $this->load( $data );
             // dump( hashKey( $data ), hashKey( $value ) );
