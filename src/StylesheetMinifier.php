@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Northrook;
 
 use LogicException;
-use Northrook\Filesystem\{Path};
 use Northrook\StylesheetMinifier\Compiler;
 use Psr\Log\LoggerInterface;
 use Support\FileInfo;
@@ -24,8 +23,8 @@ final class StylesheetMinifier extends Minify implements MinifierInterface
     private readonly Compiler $compiler;
 
     /**
-     * @param array<array-key, Path|string> $sources Will be scanned for .css files
-     * @param ?LoggerInterface              $logger  Optional PSR-3 logger
+     * @param array<array-key, string|Stringable> $sources Will be scanned for .css files
+     * @param ?LoggerInterface                    $logger  Optional PSR-3 logger
      */
     public function __construct(
         array                               $sources = [],
