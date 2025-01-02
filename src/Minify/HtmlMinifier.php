@@ -5,7 +5,6 @@ namespace Northrook\Minify;
 use Interface\Printable;
 use Interface\PrintableClass;
 use JetBrains\PhpStorm\Language;
-use Northrook\HTML\HtmlNode;
 use const Support\EMPTY_STRING;
 
 final class HtmlMinifier implements Printable
@@ -52,7 +51,7 @@ final class HtmlMinifier implements Printable
 
         $this->string = \trim( $string, ' ' );
 
-        $this->domDocumentOperations();
+        // $this->domDocumentOperations();
 
         $this->string = \preg_replace( [ '#(^<\w+.*?>)\s+#', '#\s+(</\w+?>)$#', ], '$1', $this->string );
         /*$this->string = \preg_replace( '#( +?<.+?>.*?) *?(<\/(?:a|b|i)>)#m', '$1$2', $this->string );*/
@@ -67,16 +66,16 @@ final class HtmlMinifier implements Printable
         return $this->string;
     }
 
-    private function domDocumentOperations() : self
-    {
-        $html = new HtmlNode( $this->string );
-
-        $this->parseDomElements( $html->iterateChildNodes() );
-
-        $this->string = $html->html;
-
-        return $this;
-    }
+    // private function domDocumentOperations() : self
+    // {
+    //     $html = new HtmlNode( $this->string );
+    //
+    //     $this->parseDomElements( $html->iterateChildNodes() );
+    //
+    //     $this->string = $html->html;
+    //
+    //     return $this;
+    // }
 
     private function parseDomElements( \DOMNodeList $iterateChildNodes ) : void
     {
