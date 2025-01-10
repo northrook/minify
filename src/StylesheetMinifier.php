@@ -31,7 +31,7 @@ final class StylesheetMinifier extends Minify implements MinifierInterface
         protected readonly ?LoggerInterface $logger = null,
     ) {
         Clerk::event( $this::class, $this::CLERK_GROUP );
-        $this->addSource( ...$sources );
+        $this->addSource( ...\array_values( $sources ) );
         Clerk::event( $this::class.'::initialized', $this::CLERK_GROUP );
     }
 
