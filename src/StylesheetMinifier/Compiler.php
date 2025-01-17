@@ -49,7 +49,7 @@ final class Compiler
 
         $this->css ??= $stylesheet->toString();
 
-        $profiler->stop();
+        $profiler?->stop();
         return $this;
     }
 
@@ -58,11 +58,11 @@ final class Compiler
         $profiler = Clerk::event( __METHOD__, StylesheetMinifier::CLERK_GROUP );
 
         foreach ( $this->enqueued as $key => $css ) {
-            $profiler->lap();
+            $profiler?->lap();
             $this->ast[$key] = ( new Parser( $css, $key ) )->rules();
         }
 
-        $profiler->stop();
+        $profiler?->stop();
         return $this;
     }
 
@@ -223,8 +223,7 @@ final class Compiler
         $source = \is_string( $source ) ? [$source] : $source;
 
         foreach ( $source as $index => $string ) {
-
-            $profiler->lap();
+            $profiler?->lap();
             $stylesheet = $this::minify( $string );
             if ( ! $stylesheet ) {
                 $this->logger?->notice(
@@ -236,10 +235,9 @@ final class Compiler
             }
 
             $this->enqueued[$index] = $stylesheet;
-
         }
 
-        $profiler->stop();
+        $profiler?->stop();
 
         return $this;
     }
