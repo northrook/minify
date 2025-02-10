@@ -8,7 +8,7 @@ use Exception;
 use Stringable;
 
 /**
- * A stand-alone JavaScript minifier with {@see \Symfony\Component\HttpKernel\Profiler\Profiler} integration using {@see Clerk}.
+ * A stand-alone JavaScript minifier with `Symfony\Profiler` integration using {@see Clerk}.
  *
  * Heavily based on Matthias Mullie's work.
  *
@@ -465,7 +465,7 @@ final class JavaScriptMinifier implements MinifierInterface
                 return $match[0];
             }
 
-            return $match[1].( 'true' === $match[2] ? '!0' : '!1' );
+            return $match[1].( $match[2] === 'true' ? '!0' : '!1' );
         };
         $content = \preg_replace_callback( '/(^|.\s*)\b(true|false)\b(?!:)/', $callback, $content );
 
@@ -523,7 +523,7 @@ final class JavaScriptMinifier implements MinifierInterface
         // PHP only supports $this inside anonymous functions since 5.4
         $callback = function( $match ) use ( $placeholderPrefix ) {
             // check the second index here, because the first always contains a quote
-            if ( '' === $match[2] ) {
+            if ( $match[2] === '' ) {
                 /*
                  * Empty strings need no placeholder; they can't be confused for
                  * anything else anyway.

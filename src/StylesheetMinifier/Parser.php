@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Northrook\StylesheetMinifier;
 
 use LogicException;
+use InvalidArgumentException;
 use Northrook\StylesheetMinifier\Syntax\{Block, Rule, Statement};
 
 /**
@@ -115,7 +116,8 @@ final class Parser
         }
 
         if ( \count( $extract ) > 1 ) {
-            dump( $extract );
+            $message = __METHOD__.' invalid extraction; count > 1 : '.\print_r( $extract, true );
+            throw new InvalidArgumentException( $message );
         }
 
         $length = \strlen( $extract[0] );

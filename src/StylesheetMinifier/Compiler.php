@@ -135,7 +135,7 @@ final class Compiler
         $variables = [];
 
         foreach ( $array as $key => $value ) {
-            if ( \str_starts_with( $key, '--' ) ) {
+            if ( \is_string( $key ) && \str_starts_with( $key, '--' ) ) {
                 $variables[$key] = $value;
                 unset( $array[$key] );
             }

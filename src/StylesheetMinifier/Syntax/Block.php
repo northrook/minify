@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Northrook\StylesheetMinifier\Syntax;
 
+use Core\Interface\DataInterface;
+
 /**
  * ```
  * block {
@@ -16,14 +18,14 @@ namespace Northrook\StylesheetMinifier\Syntax;
  * @internal
  * @author Martin Nielsen <mn@northrook.com>
  */
-final class Block
+final readonly class Block implements DataInterface
 {
     /**
      * @param string         $selector
      * @param Block[]|Rule[] $declarations
      */
     public function __construct(
-        public readonly string $selector,
-        public readonly array  $declarations,
+        public string $selector,
+        public array  $declarations,
     ) {}
 }

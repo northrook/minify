@@ -4,20 +4,22 @@ declare(strict_types=1);
 
 namespace Northrook\StylesheetMinifier\Syntax;
 
+use Core\Interface\DataInterface;
 use InvalidArgumentException;
 
 /**
  * ```.
  * @ identifier rule;
  * ```
+ *
  * @internal
  * @author Martin Nielsen <mn@northrook.com>
  */
-final class Statement
+final readonly class Statement implements DataInterface
 {
-    public readonly string $identifier;
+    public string $identifier;
 
-    public readonly string $rule;
+    public string $rule;
 
     public function __construct(
         string $identifier,

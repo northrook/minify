@@ -16,8 +16,8 @@ final class Assembler
 
     public function __construct(
         private array $rules,
-        private bool  $pretty = false,
-        private bool  $allowCharset = false,
+        // private bool  $pretty = false,
+        // private bool  $allowCharset = false,
     ) {}
 
     final public function build() : Assembler
@@ -29,7 +29,7 @@ final class Assembler
             //     continue;
             // }
 
-            if ( '@charset' === $selector || '@import' === $selector ) {
+            if ( $selector === '@charset' || $selector === '@import' ) {
                 $this->stylesheet .= $selector.'"'.$rule.'";';
 
                 continue;

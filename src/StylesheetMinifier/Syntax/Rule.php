@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Northrook\StylesheetMinifier\Syntax;
 
+use Core\Interface\DataInterface;
 use Support\Str;
 use RuntimeException;
 
@@ -17,12 +18,12 @@ use RuntimeException;
  * @internal
  * @author Martin Nielsen <mn@northrook.com>
  */
-final class Rule
+final readonly class Rule implements DataInterface
 {
     /** @var non-empty-string */
-    public readonly string $selector;
+    public string $selector;
 
-    public readonly array $declarations;
+    public array $declarations;
 
     public function __construct(
         string $selector,
@@ -47,7 +48,7 @@ final class Rule
         $exploded = $this->explode( $declaration );
 
         foreach ( $exploded as $declaration ) {
-            if ( false === \str_contains( $declaration, ':' ) ) {
+            if ( \str_contains( $declaration, ':' ) === false ) {
                 throw new RuntimeException( 'Error parsing Stylesheet: '.\print_r( $exploded, true ) );
             }
 

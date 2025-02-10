@@ -7,7 +7,7 @@ namespace Northrook;
 use LogicException;
 use Northrook\StylesheetMinifier\Compiler;
 use Psr\Log\LoggerInterface;
-use Support\FileInfo;
+use Core\Pathfinder\Path;
 use Stringable;
 use function String\{hashKey, sourceKey};
 
@@ -67,10 +67,10 @@ final class StylesheetMinifier extends Minify implements MinifierInterface
                 continue;
             }
 
-            $path = $source instanceof FileInfo ? $data : new FileInfo( $data );
+            $path = $source instanceof Path ? $data : new Path( $data );
 
             // If the source is a valid, readable path, add it
-            if ( 'css' === $path->getExtension() && $path->isReadable() ) {
+            if ( $path->getExtension() === 'css' && $path->isReadable() ) {
                 $this->sources["{$path->getExtension()}:".sourceKey( $path )] ??= $path;
 
                 continue;
