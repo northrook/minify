@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Northrook\StylesheetMinifier;
+namespace Support\Minify\StylesheetMinifier;
 
 use Support\Arr;
 

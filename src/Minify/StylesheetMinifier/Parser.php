@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Northrook\StylesheetMinifier;
+namespace Support\Minify\StylesheetMinifier;
 
 use LogicException;
 use InvalidArgumentException;
-use Northrook\StylesheetMinifier\Syntax\{Block, Rule, Statement};
+use Support\Minify\StylesheetMinifier\Syntax\{Block, Rule, Statement};
 
 /**
  * @internal
@@ -18,8 +18,7 @@ final class Parser
 
     private int $failsafe = 512;
 
-    private int $level = 0;
-
+    /** @var array<string, Block|Rule|Statement> */
     protected array $rules = [];
 
     protected bool $running = true;

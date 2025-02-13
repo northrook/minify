@@ -1,214 +1,74 @@
 <?php
 
-namespace Northrook;
+declare(strict_types=1);
 
-use Core\Pathfinder\Path;
-use RuntimeException;
-use Core\Interface\{Printable, PrintableClass};
-use Support\Num;
-use function String\{hashKey, sourceKey};
-use function Support\classBasename;
+namespace Support;
 
-/**
- * @author Martin Nielsen <mn@northrook.com>
- */
-abstract class Minify implements Printable
+use Support\Minify\{JavaScriptMinifier, StylesheetMinifier};
+use Psr\Log\{LoggerAwareInterface, LoggerAwareTrait};
+use Stringable;
+
+// .. CSS
+//    Merge and minify multiple CSS files or strings into one cohesive CSS string
+
+// :: JavaScript
+//    Minify one, or merge by `import` statement
+//    Can be passed to external minifier API
+
+abstract class Minify implements Stringable, LoggerAwareInterface
 {
-    use PrintableClass;
+    protected const string NEWLINE = "\n";
 
-    protected const ?string EXTENSION = null;
+    use LoggerAwareTrait;
 
-    public const string CLERK_GROUP = 'minify';
+    protected int $sizeBefore;
 
-    /**
-     * Regex patterns for removing comments from a string.
-     *
-     * - Matches from the start of the line
-     * - Includes the following line break
-     */
-    public const array REGEX_PATTERN
-        = [
-            'trimDocblockComments' => '#^\h*?/\*\*.*?\*/\R*#ms',  // PHP block comments
-            'trimSingleComments'   => '#\h*?//.+?\R*#m',         // Single line comments
-            'trimBlockComments'    => '#\h*?/\*.*?\*/\R*#ms',    // Block comments
-            'trimCssComments'      => '#\h*?/\*.*?\*/\R*#ms',    // StylesheetMinifier comments
-            'trimHtmlComments'     => '#^\h*?<!--.*?-->\R*#ms',   // HTML comments
-            'trimLatteComments'    => '#^\h*?{\*.*?\*}\R*#ms',    // Latte comments
-            'trimTwigComments'     => '/^\h*?{#.*?#}\R*/ms',      // Twig comments
-            'trimBladeComments'    => '#^\h*?{{--.*?--}}\R*#ms',  // Blade comments
-        ];
+    protected int $sizeAfter;
 
-    private float $initialSizeKb;
+    protected bool $compiled = false;
 
-    private float $minifiedSizeKb;
+    public ?string $content = null;
 
-    /** @var array<string, array|Path|resource|string> */
-    protected array $sources = [];
+    abstract public function setSource( string|Stringable ...$source ) : static;
 
-    protected bool $locked = false;
+    abstract public function minify() : self;
 
-    // Compile will be called when calling ->minify()
-    // before compile, we check combined file size
-    // returned string stored in ->string
-    // ->report() provides raw/compiled size comparison
-
-    abstract protected function compile( array $sources ) : string;
-
-    public function __toString() : string
+    final public function __toString() : string
     {
-        return $this->minify();
+        return $this->content ?? $this->minify()->content;
     }
 
-    final public function minify() : string
-    {
-        // Profiler
-        Clerk::event( __METHOD__, static::CLERK_GROUP );
-
-        // Lock the $sources
-        $this->locked = true;
-
-        if ( $this::EXTENSION === null ) {
-            throw new RuntimeException( 'The '.__CLASS__.'::EXTENSION must be defined.' );
+    final public static function JS(
+        string|Stringable $source,
+        bool              $imports = false,
+    ) : JavaScriptMinifier {
+        $minifier = new JavaScriptMinifier();
+        if ( $imports ) {
+            $minifier->imports = [];
         }
-
-        $compiled = $this->compile( $this->sources() );
-
-        $this->minifiedSizeKb = \mb_strlen( $compiled );
-
-        $this->locked = false;
-
-        Clerk::stopGroup( static::CLERK_GROUP );
-
-        // dump( $this->report() );
-        return $compiled;
+        return $minifier->setSource( $source );
     }
 
     /**
-     * Parses all provided {@see \Northrook\Minify::$sources}, returning an array of their content.
+     * @param string|Stringable ...$source
      *
-     * - Empty sources will bbe skipped.
-     *
-     * @return array<string, string>
+     * @return StylesheetMinifier
      */
-    private function sources() : array
-    {
-        $this->initialSizeKb = 0;
-        $sources             = [];
+    final public static function CSS(
+        string|Stringable ...$source,
+    ) : StylesheetMinifier {
+        $minifier = new StylesheetMinifier();
 
-        foreach ( $this->parseSources( $this->sources ) as $key => $source ) {
-            $content = $source instanceof Path ? $source->getContents() : $source;
-            if ( ! $content ) {
-                continue;
-            }
-            $this->initialSizeKb += \mb_strlen( $content, 'UTF-8' );
-            $sources[$key] = $content;
-        }
-
-        return $sources;
+        return $minifier->setSource( ...$source );
     }
 
     /**
-     * @param array<string, array|Path|resource|string> $sources
+     * @param string $string
      *
-     * @return array<string, Path|string>
+     * @return string
      */
-    private function parseSources( array $sources = [] ) : array
+    final protected function normalizeNewline( string $string ) : string
     {
-        $array = [];
-
-        foreach ( $sources as $source ) {
-            if ( \is_array( $source ) ) {
-                $array = [...$array, ...$this->parseSources( $source )];
-
-                continue;
-            }
-
-            // If the $source contains brackets, assume it is a raw CSS string
-            if ( \is_string( $source ) && ( \str_contains( $source, '{' ) && \str_contains( $source, '}' ) ) ) {
-                $array['raw:'.hashKey( $source )] ??= $source;
-
-                continue;
-            }
-
-            $resource = \is_string( $source ) ? new Path( $source ) : $source;
-
-            // TODO : Handle URL
-            // if ( $resource instanceof URL && $resource->exists() ) {
-            //     $externalContent = $resource->fetch();
-            //     if ( \is_string( $externalContent ) ) {
-            //         $array[ 'url:' . hashKey( $externalContent ) ] ??= $externalContent;
-            //     }
-            //     else {
-            //         Log::warning(
-            //                 '{minifier} was unable to process external source from URL {path}. The file was fetched, but appears empty.',
-            //                 [
-            //                         'minifier' => $this::class,
-            //                         'path'     => (string) $resource,
-            //                         'resource' => $resource,
-            //                 ],
-            //         );
-            //     }
-            //
-            //     continue;
-            // }
-
-            \assert( $resource instanceof Path );
-
-            // If the source is a valid, readable path, add it
-            if ( $this::EXTENSION === $resource->getExtension() && $resource->isReadable() ) {
-                $array["{$resource->getExtension()}:".sourceKey( $resource )] ??= $resource;
-
-                continue;
-            }
-        }
-        return $array;
-    }
-
-    /**
-     * Generate a basic compression report.
-     *
-     * - Returns a formatted string by default.
-     * - Can return an array of initialKb, minifiedKb, differenceKb, differencePercent
-     *
-     * @param bool $getData
-     *
-     * @return array|string
-     */
-    final public function report( bool $getData = false ) : string|array
-    {
-        $minifier = classBasename( $this::class );
-
-        if ( ! isset( $this->minifiedSizeKb ) ) {
-            return "{$minifier} has not been compiled yet. Please run the ".$this::class.'->minify() method first.';
-        }
-
-        $this->initialSizeKb  = (float) Num::byteSize( $this->initialSizeKb );
-        $this->minifiedSizeKb = (float) Num::byteSize( $this->minifiedSizeKb );
-
-        $differenceKb      = $this->initialSizeKb - $this->minifiedSizeKb;
-        $differencePercent = Num::percentDifference( $this->initialSizeKb, $this->minifiedSizeKb );
-
-        if ( $getData ) {
-            return [
-                'initialKb'         => $this->initialSizeKb,
-                'minifiedKb'        => $this->minifiedSizeKb,
-                'differenceKb'      => $differenceKb,
-                'differencePercent' => $differencePercent,
-            ];
-        }
-
-        return "{$minifier} compressed {$differencePercent}%. {$this->initialSizeKb}KB to {$this->minifiedSizeKb}KB, saving {$differenceKb}KB.";
+        return \str_replace( [PHP_EOL, "\r\n", "\r"], $this::NEWLINE, $string );
     }
 }
-
-//         if ( $differenceKb >= 1 ) {
-//             Log::Notice(
-//                 message : $this->type.' string minified {percent}, from {from} to {to} saving {diff},',
-//                 context : [
-//                     'from'    => "{$this->initialSizeKb}KB",
-//                     'to'      => "{$this->minifiedSizeKb}KB",
-//                     'diff'    => "{$differenceKb}KB",
-//                     'percent' => "{$differencePercent}%",
-//                 ],
-//             );
-//         }

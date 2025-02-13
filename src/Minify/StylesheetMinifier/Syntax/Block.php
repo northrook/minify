@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Northrook\StylesheetMinifier\Syntax;
+namespace Support\Minify\StylesheetMinifier\Syntax;
 
 use Core\Interface\DataInterface;
 

@@ -2,12 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Northrook\StylesheetMinifier;
+namespace Support\Minify\StylesheetMinifier;
 
 use LogicException;
-use Northrook\{Clerk, StylesheetMinifier};
-use Northrook\StylesheetMinifier\Syntax\{Block, Rule, Statement};
 use Psr\Log\LoggerInterface;
+use Support\Minify\StylesheetMinifier\Syntax\{Block, Rule, Statement};
 use function String\hashKey;
 
 /**
@@ -36,33 +35,26 @@ final class Compiler
         private readonly ?LoggerInterface $logger = null,
         private readonly bool             $strict = false,
     ) {
-        Clerk::event( $this::class, StylesheetMinifier::CLERK_GROUP );
         $this->ingestSources( $source );
     }
 
     final public function generateStylesheet() : self
     {
-        $profiler   = Clerk::event( __METHOD__, StylesheetMinifier::CLERK_GROUP );
         $stylesheet = new Assembler( $this->rules );
 
         $stylesheet->build();
 
         $this->css ??= $stylesheet->toString();
 
-        $profiler?->stop();
         return $this;
     }
 
     final public function parseEnqueued() : self
     {
-        $profiler = Clerk::event( __METHOD__, StylesheetMinifier::CLERK_GROUP );
-
         foreach ( $this->enqueued as $key => $css ) {
-            $profiler?->lap();
             $this->ast[$key] = ( new Parser( $css, $key ) )->rules();
         }
 
-        $profiler?->stop();
         return $this;
     }
 
@@ -83,7 +75,7 @@ final class Compiler
 
     private function handleStatement( Statement $statement ) : void
     {
-        if ( '@charset' === $statement->identifier ) {
+        if ( $statement->identifier === '@charset' ) {
             if ( isset( $this->rules['@charset'] ) && $this->strict ) {
                 throw new LogicException( "CSS Compiler encountered conflicting {$statement->identifier} rules." );
             }
@@ -91,15 +83,13 @@ final class Compiler
             $this->rules['@charset'] ??= \strtolower( $statement->rule );
         }
 
-        if ( '@import' === $statement->identifier ) {
+        if ( $statement->identifier === '@import' ) {
             $this->rules['@import'][] = $statement->rule;
         }
     }
 
     final public function mergeRules() : self
     {
-        Clerk::event( __METHOD__, StylesheetMinifier::CLERK_GROUP );
-
         // dd($this);
         // Loop through each provided sources' compiled AST
         foreach ( $this->ast as $source => $rules ) {
@@ -218,12 +208,9 @@ final class Compiler
 
     private function ingestSources( string|array $source ) : self
     {
-        $profiler = Clerk::event( __METHOD__, StylesheetMinifier::CLERK_GROUP );
-
         $source = \is_string( $source ) ? [$source] : $source;
 
         foreach ( $source as $index => $string ) {
-            $profiler?->lap();
             $stylesheet = $this::minify( $string );
             if ( ! $stylesheet ) {
                 $this->logger?->notice(
@@ -236,8 +223,6 @@ final class Compiler
 
             $this->enqueued[$index] = $stylesheet;
         }
-
-        $profiler?->stop();
 
         return $this;
     }
