@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Support\Minify\StylesheetMinifier;
 
-use LogicException;
-use InvalidArgumentException;
 use Support\Minify\StylesheetMinifier\Syntax\{Block, Rule, Statement};
+use LogicException, InvalidArgumentException;
 
 /**
  * @internal

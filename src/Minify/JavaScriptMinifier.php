@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace Support\Minify;
 
-use Stringable;
 use Support\Minify;
+use Core\Exception\NotSupportedException;
+use Stringable, SplFileInfo, LogicException;
 use function Support\isUrl;
 
 final class JavaScriptMinifier extends Minify
 {
-    /** @var false|string[] */
-    protected false|array $imports = false;
-
-    private ?string $source;
+    /** @var array<array-key, SplFileInfo|string> */
+    private string|array $source;
 
     /**
      * @param string|Stringable ...$source
@@ -27,22 +26,128 @@ final class JavaScriptMinifier extends Minify
         return $this;
     }
 
-    public function minify() : self
+    /**
+     * A key will be generated from provided file paths.
+     *
+     * @return bool
+     */
+    protected function useCachedContent() : bool
+    {
+        ['hash' => $hash, 'data' => $data] = $this->getCached( $this->key );
+
+        if ( $this->version === $hash && $data ) {
+            $this->content = $data;
+            return true;
+        }
+
+        return false;
+    }
+
+    private function validateSources(
+        ?string $key,
+        bool    $bundleImportStatements,
+    ) : void {
+        $version = '';
+        $autoKey = '';
+
+        $isFile = \file_exists( $this->source );
+
+        if ( $isFile || isUrl( $this->source ) ) {
+            $autoKey .= $this->source;
+            $version .= \filemtime( $this->source );
+        }
+        else {
+            $version .= $this->sourceHash( $this->source );
+        }
+
+        if ( $bundleImportStatements ) {
+            if ( ! $isFile ) {
+                throw new NotSupportedException( 'Imports only supported for local files.' );
+            }
+
+            $basePath = \pathinfo( $this->source, PATHINFO_DIRNAME );
+            $source   = $this->normalizeNewline( \file_get_contents( $this->source ) );
+
+            $importCount  = \substr_count( $source, 'import ' ) + 1;
+            $this->source = \explode( self::NEWLINE, $source, $importCount );
+
+            foreach ( $this->source as $line => $string ) {
+                if ( ! \str_starts_with( $string, 'import ' ) ) {
+                    continue;
+                }
+
+                if ( $importPath = $this->importPath( $string, $basePath ) ) {
+                    $autoKey .= $importPath;
+                    $version .= $importPath->getMTime();
+                    $this->source[$line] = $importPath;
+                }
+            }
+        }
+        elseif ( $isFile ) {
+            $this->source = $this->normalizeNewline( \file_get_contents( $this->source ) );
+        }
+        else {
+            $this->source = $this->normalizeNewline( $this->source );
+        }
+
+        if ( ! ( $key ?? $autoKey ) ) {
+            $this->logger?->warning(
+                '{class}: No key set or derived from sources. Results will not be cached.',
+                ['class' => $this::class],
+            );
+            $this->key = null;
+            return;
+        }
+
+        $this->key     = $key ?? $this->sourceHash( $autoKey );
+        $this->version = $this->sourceHash( $version );
+    }
+
+    private function handleImportStatements() : void
+    {
+        if ( ! \is_array( $this->source ) ) {
+            throw new LogicException( 'Imports were not handled.' );
+        }
+
+        foreach ( $this->source as $index => $source ) {
+            if ( $source instanceof SplFileInfo ) {
+                $source = \file_get_contents( $source->getPathname() );
+            }
+
+            $this->source[$index] = $this->normalizeNewline( $source );
+        }
+    }
+
+    public function minify( ?string $key = null, bool $bundleImportStatements = false ) : self
     {
         if ( $this->content ) {
             return $this;
         }
 
-        $this->validateSource();
+        $this->validateSources( $key, $bundleImportStatements );
 
-        if ( $this->imports !== false ) {
-            $this->bundleImportStatements();
+        if ( $this->cachePool && $this->useCachedContent() ) {
+            return $this;
         }
 
+        if ( $bundleImportStatements ) {
+            $this->handleImportStatements();
+        }
+
+        if ( \is_array( $this->source ) ) {
+            $this->source = \implode( self::NEWLINE, $this->source );
+        }
+
+        $this->sizeBefore = \mb_strlen( $this->source );
+
         // TODO : [low] Merge into this file
-        $this->content = JavaScriptMinifier\Minifier::minify( $this->content );
+        $this->content = JavaScriptMinifier\Minifier::minify( $this->source );
 
         $this->sizeAfter = \mb_strlen( $this->content );
+
+        if ( $this->cachePool && $this->key ) {
+            $this->updateCache( $this->version, $this->content );
+        }
 
         return $this;
     }
@@ -76,41 +181,13 @@ final class JavaScriptMinifier extends Minify
         return $this;
     }
 
-    public function bundleImportStatements() : self
-    {
-        $this->validateSource();
-
-        $basePath = \pathinfo( $this->source, PATHINFO_DIRNAME );
-
-        $importCount = \substr_count( $this->content, 'import ' ) + 1;
-        $parseLines  = \explode( self::NEWLINE, $this->content, $importCount );
-
-        foreach ( $parseLines as $line => $string ) {
-            if ( ! \str_starts_with( $string, 'import ' ) ) {
-                continue;
-            }
-
-            $imported = $this->importStatement( $string, $basePath );
-
-            if ( $imported ) {
-                $parseLines[$line] = $imported;
-            }
-        }
-
-        $this->content = \implode( self::NEWLINE, $parseLines );
-
-        $this->sizeBefore = \mb_strlen( $this->content );
-
-        return $this;
-    }
-
     /**
      * @param string $string
      * @param string $basePath
      *
-     * @return false|string
+     * @return false|SplFileInfo
      */
-    private function importStatement( string $string, string $basePath ) : string|false
+    private function importPath( string $string, string $basePath ) : SplFileInfo|false
     {
         // Trim import statement, quotes and whitespace, and slashes
         $fileName = \trim( \substr( $string, \strlen( 'import ' ) ), " \n\r\t\v\0'\"/\\" );
@@ -122,29 +199,8 @@ final class JavaScriptMinifier extends Minify
         // TODO: Handle relative paths
         // TODO: Handle URL imports
 
-        $filePath = "{$basePath}/{$fileName}";
+        $filePath = new SplFileInfo( "{$basePath}/{$fileName}" );
 
-        $this->imports[$fileName] = $filePath;
-
-        return \file_get_contents( $filePath );
-    }
-
-    private function validateSource() : void
-    {
-        if ( isset( $this->content ) ) {
-            $this->logger?->info( '{method} already called.', ['method' => __METHOD__] );
-            return;
-        }
-
-        if ( \file_exists( $this->source ) || isUrl( $this->source ) ) {
-            $source = \file_get_contents( $this->source );
-        }
-        else {
-            $source       = $this->source;
-            $this->source = null;
-        }
-
-        $this->content    = $this->normalizeNewline( $source );
-        $this->sizeBefore = \mb_strlen( $source );
+        return $filePath->isFile() ? $filePath : false;
     }
 }

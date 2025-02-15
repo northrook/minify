@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Support\Minify;
 
 use Support\Minify;
-use Stringable;
-use SplFileInfo;
 use Support\Minify\StylesheetMinifier\Compiler;
+use Stringable, SplFileInfo;
 
 final class StylesheetMinifier extends Minify
 {
@@ -16,13 +15,19 @@ final class StylesheetMinifier extends Minify
     /** @var string[] */
     private array $sources = [];
 
-    public function minify() : self
+    public function minify( ?string $key = null ) : self
     {
         if ( $this->content ) {
             return $this;
         }
 
-        $this->validateSource();
+        // dump( $this->sources );
+
+        if ( $this->cachePool && $this->useCachedContent( $key ) ) {
+            return $this;
+        }
+
+        $this->validateSources();
 
         // Initialize the compiler from provided $sources
         $this->compiler ??= new Compiler( $this->sources, $this->logger );
@@ -34,6 +39,10 @@ final class StylesheetMinifier extends Minify
         $this->content = $this->compiler->css;
 
         $this->sizeAfter = \mb_strlen( $this->content ?? '' );
+
+        if ( $this->cachePool && $this->key ) {
+            $this->updateCache( $this->version, $this->content );
+        }
 
         return $this;
     }
@@ -47,7 +56,7 @@ final class StylesheetMinifier extends Minify
         return $this;
     }
 
-    private function validateSource() : void
+    private function validateSources() : void
     {
         if ( isset( $this->content ) ) {
             $this->logger?->info( '{method} already called.', ['method' => __METHOD__] );
@@ -58,13 +67,13 @@ final class StylesheetMinifier extends Minify
 
         foreach ( $this->sources as $source ) {
             if ( ! $source ) {
-                // TODO : [low] Log/throw on empty source
                 continue;
             }
 
-            if ( \str_contains( $source, '{' ) && \str_contains( $source, '}' ) ) {
+            if ( $this->rawStyleString( $source ) ) {
                 $source = $this->normalizeNewline( $source );
-                $sources['raw:'.$this->hash( $source )] ??= $source;
+                $hash   = $this->sourceHash( $source );
+                $sources['raw:'.$hash] ??= $source;
 
                 continue;
             }
@@ -74,15 +83,18 @@ final class StylesheetMinifier extends Minify
             // If the source is a valid, readable path, add it
             if ( $path->getExtension() === 'css' && $path->isReadable() ) {
                 $source = \file_get_contents( $path->getPathname() );
-                $source = $this->normalizeNewline( $source );
-                $sources['css:'.$this->hash( $source )] ??= $source;
+                $name   = $this->sourceName( $path->getPathname() );
+                $sources['css:'.$name] ??= $this->normalizeNewline( $source );
 
                 continue;
             }
 
             $this->logger?->error(
                 'Unable to add new source {source}, the path is not valid.',
-                ['source' => $source, 'path' => $path],
+                [
+                    'source' => $source,
+                    'path'   => $path,
+                ],
             );
         }
 
@@ -91,8 +103,102 @@ final class StylesheetMinifier extends Minify
         $this->sizeBefore = \mb_strlen( \implode( '', $this->sources ), 'UTF-8' );
     }
 
-    private function hash( string|Stringable $value ) : string
+    /**
+     * A key will be generated from provided file paths.
+     *
+     * @param null|string $key
+     *
+     * @return bool
+     */
+    protected function useCachedContent( ?string $key = null ) : bool
     {
-        return \hash( algo : 'xxh3', data : (string) $value );
+        $version = '';
+        $autoKey = '';
+
+        foreach ( $this->sources as $source ) {
+            if ( $this->rawStyleString( $source ) ) {
+                $version .= $this->sourceHash( $source );
+            }
+            elseif ( \file_exists( $source ) ) {
+                $autoKey .= $source;
+                $version .= \filemtime( $source );
+            }
+            else {
+                $this->logger?->error(
+                    'Unable to add new source {source}, the path is not valid.',
+                    [
+                        'source' => $source,
+                    ],
+                );
+            }
+        }
+
+        if ( ! ( $key ?? $autoKey ) ) {
+            $this->logger?->warning(
+                '{class}: No key set or derived from sources. Results will not be cached.',
+                ['class' => $this::class],
+            );
+            $this->key = null;
+            return false;
+        }
+
+        $this->key     = $key ?? $this->sourceHash( $autoKey );
+        $this->version = $this->sourceHash( $version );
+
+        ['hash' => $hash, 'data' => $data] = $this->getCached( $this->key );
+
+        if ( $this->version === $hash && $data ) {
+            $this->content = $data;
+            return true;
+        }
+
+        return false;
+    }
+
+
+    private function rawStyleString( string $string ) : bool
+    {
+        return \str_contains( $string, '{' ) && \str_contains( $string, '}' );
     }
 }
+
+// foreach ( $this->sources as $source ) {
+//     // TODO : [low] Log/throw on empty source
+//     if ( ! $source ) {
+//         continue;
+//     }
+//
+//     if ( \str_contains( $source, '{' ) && \str_contains( $source, '}' ) ) {
+//         $source = $this->normalizeNewline( $source );
+//         $hash   = $this->hash( $source );
+//         $sources['raw:'.$hash] ??= $source;
+//
+//         // non-file versions use hash - we only care if it has any changes, not what they might be
+//         $version .= $hash;
+//
+//         continue;
+//     }
+//
+//     $path = new SplFileInfo( $source );
+//
+//     // If the source is a valid, readable path, add it
+//     if ( $path->getExtension() === 'css' && $path->isReadable() ) {
+//         $source = \file_get_contents( $path->getPathname() );
+//         $source = $this->normalizeNewline( $source );
+//         $hash   = $this->hash( $source );
+//         $sources['css:'.$hash] ??= $source;
+//
+//         // We could use the hash here, or filemtime, then do get_contents later if the final hash differs
+//         $version .= $hash;
+//
+//         continue;
+//     }
+//
+//     $this->logger?->error(
+//             'Unable to add new source {source}, the path is not valid.',
+//             [
+//                     'source' => $source,
+//                     'path'   => $path,
+//             ],
+//     );
+// }

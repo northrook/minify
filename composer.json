@@ -20,13 +20,15 @@
     "php": ">=8.3",
     "ext-dom": "*",
     "ext-curl": "*",
-    "northrook/support": "dev-main"
+    "northrook/support": "dev-main",
+    "northrook/cache": "dev-main"
   },
   "require-dev": {
     "phpstan/phpstan": " @stable",
     "northrook/php-cs": "dev-main",
     "northrook/logger": "dev-main",
     "jetbrains/phpstorm-attributes": "^1.2",
-    "tracy/tracy": "*"
+    "tracy/tracy": "*",
+    "symfony/cache": "^7.2"
   }
 }
