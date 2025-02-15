@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Support;
 
 use Psr\Log\{LoggerInterface};
-use Psr\Cache\{CacheItemPoolInterface, InvalidArgumentException};
+use Psr\Cache\{CacheItemInterface, CacheItemPoolInterface, InvalidArgumentException};
 use Support\Minify\{JavaScriptMinifier, StylesheetMinifier};
-use Symfony\Component\Cache\CacheItem;
 use Symfony\Component\Stopwatch\Stopwatch;
 use Stringable, LogicException;
 
@@ -26,7 +25,9 @@ abstract class Minify implements Stringable
 
     protected ?string $version = null;
 
-    protected readonly ?CacheItem $cache;
+    protected readonly ?CacheItemInterface $cache;
+
+    protected bool $usedCache = false;
 
     protected int $sizeBefore;
 
@@ -50,6 +51,11 @@ abstract class Minify implements Stringable
         $source = $this->cachePool ? $this->cache->get() : $this->createReport();
 
         return $source['report'];
+    }
+
+    final public function usedCache() : bool
+    {
+        return $this->usedCache;
     }
 
     final protected function updateCache(

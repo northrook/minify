@@ -21,8 +21,6 @@ final class StylesheetMinifier extends Minify
             return $this;
         }
 
-        // dump( $this->sources );
-
         if ( $this->cachePool && $this->useCachedContent( $key ) ) {
             return $this;
         }
@@ -148,13 +146,12 @@ final class StylesheetMinifier extends Minify
         ['hash' => $hash, 'data' => $data] = $this->getCached( $this->key );
 
         if ( $this->version === $hash && $data ) {
-            $this->content = $data;
-            return true;
+            $this->content   = $data;
+            $this->usedCache = true;
         }
 
-        return false;
+        return $this->usedCache;
     }
-
 
     private function rawStyleString( string $string ) : bool
     {

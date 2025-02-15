@@ -36,11 +36,11 @@ final class JavaScriptMinifier extends Minify
         ['hash' => $hash, 'data' => $data] = $this->getCached( $this->key );
 
         if ( $this->version === $hash && $data ) {
-            $this->content = $data;
-            return true;
+            $this->content   = $data;
+            $this->usedCache = true;
         }
 
-        return false;
+        return $this->usedCache;
     }
 
     private function validateSources(
