@@ -24,11 +24,8 @@
     "northrook/cache": "dev-main"
   },
   "require-dev": {
-    "phpstan/phpstan": " @stable",
-    "northrook/php-cs": "dev-main",
+    "northrook/dev": "dev-main",
     "northrook/logger": "dev-main",
-    "jetbrains/phpstorm-attributes": "^1.2",
-    "tracy/tracy": "*",
     "symfony/cache": "^7.2"
   }
 }
