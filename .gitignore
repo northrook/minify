@@ -21,6 +21,7 @@
 /templates/
 /tests/
 /assets
+/var
 
 # Node
 /node_modules/

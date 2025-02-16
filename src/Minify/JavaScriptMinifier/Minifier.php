@@ -22,7 +22,7 @@ use RuntimeException;
 final class Minifier
 {
     /** @var string[] */
-    protected static array $keywords = ['delete', 'do', 'for', 'in', 'instanceof', 'return', 'typeof', 'yield'];
+    private const array KEYWORDS = ['delete', 'do', 'for', 'in', 'instanceof', 'return', 'typeof', 'yield'];
 
     /**
      * The input javascript to be minified.
@@ -171,7 +171,7 @@ final class Minifier
         $this->last_char = "\n";
         $this->output    = '';
 
-        $this->max_keyword_len = (int) \max( \array_map( 'strlen', self::$keywords ) );
+        $this->max_keyword_len = (int) \max( \array_map( 'strlen', $this::KEYWORDS ) );
     }
 
     protected function echo( string $char ) : void
@@ -645,7 +645,7 @@ final class Minifier
         // Regular expression only needs to check final part of output for keyword.
         $testOutput = \substr( $this->output.$this->a, -1 * ( $this->max_keyword_len + 10 ) );
 
-        foreach ( self::$keywords as $keyword ) {
+        foreach ( $this::KEYWORDS as $keyword ) {
             if ( \preg_match( '/[^\w]'.$keyword.'[ ]?$/i', $testOutput ) === 1 ) {
                 return true;
             }
