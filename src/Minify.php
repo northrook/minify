@@ -101,7 +101,7 @@ abstract class Minify implements Stringable
     final protected function getCached( string $key ) : array
     {
         try {
-            $this->cache ??= $this->cachePool->getItem( $key );
+            $this->cache ??= $this->cachePool->getItem( "minify.{$key}" );
         }
         catch ( InvalidArgumentException $e ) {
             throw new LogicException( $e->getMessage(), $e->getCode(), $e );
