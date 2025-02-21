@@ -17,7 +17,7 @@ final class StylesheetMinifier extends Minify
 
     public function minify( ?string $key = null ) : self
     {
-        if ( $this->content ) {
+        if ( $this->output ) {
             return $this;
         }
 
@@ -34,12 +34,12 @@ final class StylesheetMinifier extends Minify
             ->mergeRules()
             ->generateStylesheet();
 
-        $this->content = $this->compiler->css;
+        $this->output = $this->compiler->css;
 
-        $this->sizeAfter = \mb_strlen( $this->content ?? '' );
+        $this->sizeAfter = \mb_strlen( $this->output ?? '' );
 
         if ( $this->cachePool && $this->key ) {
-            $this->updateCache( $this->version, $this->content );
+            $this->updateCache( $this->version, $this->output );
         }
 
         return $this;
@@ -56,7 +56,7 @@ final class StylesheetMinifier extends Minify
 
     private function validateSources() : void
     {
-        if ( isset( $this->content ) ) {
+        if ( isset( $this->output ) ) {
             $this->logger?->info( '{method} already called.', ['method' => __METHOD__] );
             return;
         }
@@ -146,7 +146,7 @@ final class StylesheetMinifier extends Minify
         ['hash' => $hash, 'data' => $data] = $this->getCached( $this->key );
 
         if ( $this->version === $hash && $data ) {
-            $this->content   = $data;
+            $this->output    = $data;
             $this->usedCache = true;
         }
 

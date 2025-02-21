@@ -14,7 +14,7 @@ namespace Support\Minify\JavaScriptMinifier;
 use RuntimeException;
 
 /**
- * Minifier
+ * JShrink Minifier
  *
  * @author  Robert Hafner <tedivm@tedivm.com>
  * @link    https://raw.githubusercontent.com/tedious/JShrink/refs/heads/master/LICENSE BSD 3-Clause License

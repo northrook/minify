@@ -33,7 +33,7 @@ abstract class Minify implements Stringable
 
     protected int $sizeAfter;
 
-    public ?string $content = null;
+    public ?string $output = null;
 
     /**
      * @param null|CacheItemPoolInterface $cachePool
@@ -125,7 +125,7 @@ abstract class Minify implements Stringable
 
     final public function __toString() : string
     {
-        return $this->content ?? $this->minify()->content;
+        return $this->output ?? $this->minify()->output;
     }
 
     final public static function JS(
