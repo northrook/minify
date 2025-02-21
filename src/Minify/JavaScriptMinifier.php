@@ -7,13 +7,14 @@ namespace Support\Minify;
 use Support\Minify;
 use Core\Exception\{NotSupportedException, RegexpException};
 use Stringable, SplFileInfo, LogicException;
-use function Support\isUrl;
+use function Support\{isUrl};
 
 final class JavaScriptMinifier extends Minify
 {
     /** @var array<array-key, SplFileInfo|string> */
     private string|array $source;
 
+    /** @var string[] */
     protected array $comments = [];
 
     /**
@@ -53,7 +54,7 @@ final class JavaScriptMinifier extends Minify
         $this->parse();
 
         // [JShrink]
-        // $this->content = JavaScriptMinifier\Minifier::minify( $this->source );
+        // $this->output = JavaScriptMinifier\Minifier::minify( $this->source );
 
         $this->sizeAfter = \mb_strlen( $this->output );
 
@@ -95,22 +96,22 @@ final class JavaScriptMinifier extends Minify
 
     protected function parse() : void
     {
-        dump( $this->source );
-
-        $this->removeComments();
-
+        // Normalize tabs
         $this->output = $this->source;
+
+        $this->removeComments()
+            ->handleWhitespace();
     }
 
     protected function removeComments() : self
     {
         $this->output = (string) \preg_replace_callback(
-            pattern  : '/\/\/[^\n]*|\/\*[\s\S]*?\*\//',
+            pattern  : '/^\h*\/\/[^\n]*|^\h*\/\*[\s\S]*?\*\//m',
             callback : function( $matches ) : string {
-                dump( $matches );
+                $this->comments[] = $matches[0];
                 return '';
             },
-            subject  : $this->source,
+            subject  : $this->output,
         );
         RegexpException::check();
 
@@ -119,8 +120,54 @@ final class JavaScriptMinifier extends Minify
 
     protected function handleWhitespace() : self
     {
-        $this->output = (string) \preg_replace( '/\s+/u', ' ', $this->output );
+        // reduce consecutive newlines to single one
+        $this->output = \preg_replace(
+            pattern     : '~[\\n]+~',
+            replacement : $this::NEWLINE,
+            subject     : $this->output,
+        );
+        RegexpException::check();
 
+        $tabSize = null;
+
+        $lines = \explode( $this::NEWLINE, $this->output );
+
+        for ( $i = 0; $i < \count( $lines ); $i++ ) {
+            $leadingSpaces = \strspn( $lines[$i], ' ' );
+            if ( ! $tabSize && $leadingSpaces ) {
+                $tabSize = $leadingSpaces;
+            }
+
+            if ( ! \trim( $lines[$i] ) ) {
+                unset( $lines[$i] );
+
+                continue;
+            }
+            $line = \rtrim( $lines[$i] );
+            $line = \substr( $line, $leadingSpaces );
+
+            if ( $leadingSpaces && $tabSize ) {
+                $line = \str_repeat( "\t", $leadingSpaces / $tabSize ).$line;
+            }
+
+            $nextLine = $lines[$i + 1] ?? null;
+
+            if ( $nextLine
+                 && \preg_match( '#[\w?!_h,.]\h*[`"\']\h\+$#', $line )
+                 && \preg_match( '#^\h*[`"\']\h*[\w?!_h,.]#', $nextLine )
+            ) {
+                $line     = \substr( \rtrim( $line, ' +' ), 0, -1 );
+                $nextLine = \substr( \ltrim( $nextLine ), 1 );
+
+                $line .= $nextLine;
+
+                $lines[$i + 1] = '';
+            }
+            $lines[$i] = $line;
+        }
+
+        $this->output = \implode( $this::NEWLINE, \array_filter( $lines ) );
+        $this->output = \trim( \str_replace( ["\t"], '  ', $this->output ) );
         return $this;
     }
 
