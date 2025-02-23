@@ -27,5 +27,8 @@
     "northrook/dev": "dev-main",
     "northrook/logger": "dev-main",
     "symfony/cache": "^7.2"
+  },
+  "scripts": {
+    "phpstan": "vendor/bin/phpstan analyse"
   }
 }

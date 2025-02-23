@@ -16,16 +16,11 @@ final class Status
 {
     protected null|int|float $timer = null;
 
-    protected int $sourceBytes;
+    protected ?int $sourceBytes = null;
 
-    protected int $minifiedBytes;
+    protected ?int $minifiedBytes = null;
 
     public readonly DateTimeImmutable $timestamp;
-
-    public function __construct()
-    {
-        \Northrook\Logger\Log::debug( __METHOD__ );
-    }
 
     /**
      * @internal
@@ -93,6 +88,9 @@ final class Status
         return $time ? $time.'ms' : null;
     }
 
+    /**
+     * @return array{0: ?int, 1: ?int}
+     */
     public function getBytes() : array
     {
         return [
