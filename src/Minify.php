@@ -4,136 +4,192 @@ declare(strict_types=1);
 
 namespace Support;
 
-use Psr\Log\{LoggerInterface};
-use Psr\Cache\{CacheItemInterface, CacheItemPoolInterface, InvalidArgumentException};
-use Support\Minify\{JavaScriptMinifier, StylesheetMinifier};
-use Symfony\Component\Stopwatch\Stopwatch;
+use Psr\Log\LoggerInterface;
+use Psr\Cache\CacheItemPoolInterface;
+use Cache\CachePoolTrait;
+use Support\Minify\{Report, Result, Status};
 use Stringable, LogicException;
-
-// .. CSS
-//    Merge and minify multiple CSS files or strings into one cohesive CSS string
-
-// :: JavaScript
-//    Minify one, or merge by `import` statement
-//    Can be passed to external minifier API
 
 abstract class Minify implements Stringable
 {
-    protected const string NEWLINE = "\n";
+    use CachePoolTrait;
+
+    private readonly Result $result;
+
+    private readonly Report $report;
+
+    protected readonly Status $status;
+
+    protected bool $locked = false;
 
     protected ?string $key;
 
-    protected ?string $version = null;
+    protected ?string $hash = null;
 
-    protected readonly ?CacheItemInterface $cache;
+    protected bool $useCache;
 
-    protected bool $usedCache = false;
-
-    protected int $sizeBefore;
-
-    protected int $sizeAfter;
-
-    public ?string $output = null;
+    protected string $buffer = PLACEHOLDER_STRING;
 
     /**
      * @param null|CacheItemPoolInterface $cachePool
      * @param null|LoggerInterface        $logger
-     * @param ?Stopwatch                  $stopwatch
      */
     final public function __construct(
-        protected readonly ?CacheItemPoolInterface $cachePool = null,
-        protected readonly ?LoggerInterface        $logger = null,
-        protected readonly ?Stopwatch              $stopwatch = null,
-    ) {}
+        ?CacheItemPoolInterface             $cachePool = null,
+        protected readonly ?LoggerInterface $logger = null,
+    ) {
+        $this->status = new Status();
+        $this->cache  = $cachePool ?? [];
+    }
 
-    final public function getReport() : string
+    final public function minify( ?string $key = null, bool $deferCache = false ) : self
     {
-        $source = $this->cachePool ? $this->cache->get() : $this->createReport();
+        if ( $this->preflight( $key ) ) {
+            return $this;
+        }
 
-        return $source['report'];
+        if ( $this->useCache ) {
+            $cached = $this->getCache( $this->key );
+
+            if ( $cached && ( $this->hash === $cached['hash'] ) ) {
+                $this->result = new Result( ...$cached );
+
+                return $this;
+            }
+        }
+
+        // ..  Skip if `$key` and `$hash` matches a cached result
+        $this->process();
+
+        $this->status->timer( true );
+
+        $result = [
+            'key'     => $this->key,
+            'hash'    => $this->hash,
+            'version' => \hash( 'xxh32', $this->hash ),
+            'string'  => $this->buffer,
+            'report'  => \serialize( $this->getReport() ),
+        ];
+        $this->setCache( $this->key, $result, $deferCache );
+
+        $this->result = new Result( ...$result );
+        unset( $this->buffer );
+        return $this;
+    }
+
+    /**
+     * @param null|string $key from {@see self::minify()}
+     *
+     * @return bool
+     */
+    final protected function preflight( ?string $key ) : bool
+    {
+        if ( $this->locked ) {
+            return true;
+        }
+
+        $this->status->timer();
+
+        [$this->key, $this->hash] = $this->prepare( $key );
+
+        $this->useCache = $this->hasCache( $this->key );
+        $this->locked   = true;
+
+        return false;
+    }
+
+    /**
+     * Parses and prepares provided `$source`.
+     *
+     * @param ?string $key
+     *
+     * @return array{0: ?string, 1: string} `key,hash`
+     */
+    abstract protected function prepare( ?string $key ) : array;
+
+    abstract protected function process() : void;
+
+    /**
+     * Assign a source value.
+     *
+     * @param string|Stringable ...$source
+     *
+     * @return $this
+     */
+    final public function setSource( string|Stringable ...$source ) : static
+    {
+        if ( $this->locked ) {
+            throw new LogicException( $this::class.' has been locked by the compile proccess.' );
+        }
+
+        if ( ! \property_exists( $this, 'source' ) ) {
+            throw new LogicException( 'The source property is not defined.' );
+        }
+
+        if ( \is_string( $this->source ) ) {
+            $this->source = (string) \current( $source );
+        }
+        elseif ( \is_array( $this->source ) ) {
+            foreach ( $source as $value ) {
+                $key = $value instanceof Stringable
+                        ? class_id( $value, true )
+                        : $this->sourceHash( $value );
+
+                // if ( ! isset( $this->source[$key] ) ) {
+                //     unset( $this->source[$key] );
+                // }
+
+                $this->source[$key] ??= (string) $value;
+            }
+        }
+        else {
+            $minifier = $this::class;
+            $message  = "The '{$minifier}' source property must be string or array. ";
+            throw new LogicException( $message );
+        }
+
+        return $this;
     }
 
     final public function usedCache() : bool
     {
-        return $this->usedCache;
+        if ( ! isset( $this->useCache ) ) {
+            throw new LogicException( "The 'usedCache()' method must be called after 'minify()'." );
+        }
+        return $this->useCache;
     }
 
-    final protected function updateCache(
-        string $hash,
-        string $data,
-    ) : string {
-        $var = \get_defined_vars() + $this->createReport();
-
-        $this->cache->set( $var );
-
-        $this->cachePool->save( $this->cache );
-
-        return $data;
-    }
-
-    /**
-     * @return array{report: string, status: array{initialKb: float, minifiedKb: float, differenceKb: float, differencePercent: float}}
-     */
-    private function createReport() : array
+    final public function getReport() : Report
     {
-        $beforeKB = (float) Num::byteSize( $this->sizeBefore );
-        $afterKB  = (float) Num::byteSize( $this->sizeAfter );
-
-        $deltaKb = $beforeKB - $afterKB;
-        $percent = Num::percentDifference( $beforeKB, $afterKB );
-
-        return [
-            'report' => "Minified {$percent}%. {$beforeKB}KB to {$afterKB}KB, saving {$deltaKb}KB.",
-            'status' => [
-                'initialKb'         => $beforeKB,
-                'minifiedKb'        => $afterKB,
-                'differenceKb'      => $deltaKb,
-                'differencePercent' => $percent,
-            ],
-        ];
+        if ( isset( $this->result, $this->result->report ) ) {
+            return $this->result->report;
+        }
+        return $this->report ??= new Report(
+            $this->key,
+            $this::class,
+            $this->status,
+        );
     }
 
-    /**
-     * @param string $key
-     *
-     * @return array{'hash': ?string, 'data': ?string}
-     */
-    final protected function getCached( string $key ) : array
+    public function getBuffer() : string
     {
-        try {
-            $this->cache ??= $this->cachePool->getItem( "minify.{$key}" );
-        }
-        catch ( InvalidArgumentException $e ) {
-            throw new LogicException( $e->getMessage(), $e->getCode(), $e );
-        }
-
-        if ( ! $this->cache->isHit() ) {
-            return [
-                'hash' => null,
-                'data' => null,
-            ];
-        }
-
-        $var = $this->cache->get();
-
-        return \array_slice( $var, 0, 2 );
+        return $this->buffer;
     }
 
-    abstract public function setSource( string|Stringable ...$source ) : static;
-
-    abstract public function minify( ?string $key = null ) : self;
+    public function getResult() : Result
+    {
+        return $this->result;
+    }
 
     final public function __toString() : string
     {
-        return $this->output ?? $this->minify()->output;
+        return $this->result->string;
     }
 
     final public static function JS(
         string|Stringable $source,
-        bool              $imports = false,
     ) : JavaScriptMinifier {
-        $minifier = new JavaScriptMinifier();
-        return $minifier->setSource( $source );
+        return ( new JavaScriptMinifier() )->setSource( $source );
     }
 
     /**
@@ -144,19 +200,7 @@ abstract class Minify implements Stringable
     final public static function CSS(
         string|Stringable ...$source,
     ) : StylesheetMinifier {
-        $minifier = new StylesheetMinifier();
-
-        return $minifier->setSource( ...$source );
-    }
-
-    /**
-     * @param string $string
-     *
-     * @return string
-     */
-    final protected function normalizeNewline( string $string ) : string
-    {
-        return \str_replace( [PHP_EOL, "\r\n", "\r"], $this::NEWLINE, $string );
+        return ( new StylesheetMinifier() )->setSource( ...$source );
     }
 
     final protected function sourceName( string $string ) : string
@@ -172,6 +216,6 @@ abstract class Minify implements Stringable
 
     final protected function sourceHash( string|Stringable $value ) : string
     {
-        return \hash( algo : 'xxh3', data : $this->normalizeNewline( (string) $value ) );
+        return \hash( algo : 'xxh64', data : normalizeNewline( $value ) );
     }
 }

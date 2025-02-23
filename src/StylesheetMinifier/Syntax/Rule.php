@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Support\Minify\StylesheetMinifier\Syntax;
+namespace Support\StylesheetMinifier\Syntax;
 
 use Core\Interface\DataInterface;
-use Support\Str;
 use RuntimeException;
+use function Support\str_replace_each;
 
 /**
  * ```
@@ -23,26 +23,31 @@ final readonly class Rule implements DataInterface
     /** @var non-empty-string */
     public string $selector;
 
+    /** @var array<string,string> */
     public array $declarations;
 
     public function __construct(
         string $selector,
         string $declaration,
     ) {
-        $this->selector( $selector );
+        $this->selector = $this->selector( $selector );
 
-        $this->declarations( $declaration );
+        $this->declarations = $this->declarations( $declaration );
     }
 
-    private function selector( string $string ) : void
+    protected function selector( string $string ) : string
     {
-        $selector       = \trim( $string );
-        $selector       = \preg_replace( '/\s*\+\s*/m', '+', $selector );
-        $this->selector = $selector;
+        return \preg_replace( '/\s*\+\s*/m', '+', \trim( $string ) );
     }
 
-    private function declarations( string $declaration ) : void
+    /**
+     * @param string $declaration
+     *
+     * @return array<string,string>
+     */
+    protected function declarations( string $declaration ) : array
     {
+        /** @var array<string,string> $declarations */
         $declarations = [];
 
         $exploded = $this->explode( $declaration );
@@ -57,28 +62,26 @@ final readonly class Rule implements DataInterface
             // dump($declaration);
             [$selector, $value] = \explode( ':', $declaration );
 
-            // dump($selector, $value);
-
-            $value = Str::replaceEach(
+            $selector                = (string) \str_replace( '≡', '\:', $selector );
+            $declarations[$selector] = (string) str_replace_each(
                 [
                     '0.' => '.',
                     '≡'  => '\:',
                 ],
                 $value,
             );
-
-            $selector                = \str_replace( '≡', '\:', $selector );
-            $declarations[$selector] = $value;
         }
 
-        // dump( $declarations );
-        $this->declarations = $declarations;
+        return $declarations;
     }
 
+    /**
+     * @param string $declaration
+     *
+     * @return string[]
+     */
     private function explode( string $declaration ) : array
     {
-        return \array_filter(
-            \explode( ';', \trim( $declaration, " \n\r\t\v\0{}" ) ),
-        );
+        return \array_filter( \explode( ';', \trim( $declaration, " \n\r\t\v\0{}" ) ) );
     }
 }

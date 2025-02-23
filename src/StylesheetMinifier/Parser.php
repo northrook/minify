@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Support\Minify\StylesheetMinifier;
+namespace Support\StylesheetMinifier;
 
-use Support\Minify\StylesheetMinifier\Syntax\{Block, Rule, Statement};
+use Support\StylesheetMinifier\Syntax\{Block, Rule, Statement};
 use LogicException, InvalidArgumentException;
 
 /**

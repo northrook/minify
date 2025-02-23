@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Support\Minify\StylesheetMinifier;
+namespace Support\StylesheetMinifier;
 
 use Support\Arr;
 

@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Support\Minify\StylesheetMinifier;
+namespace Support\StylesheetMinifier;
 
 use Psr\Log\LoggerInterface;
-use Support\Minify\StylesheetMinifier\Syntax\{Block, Rule, Statement};
+use Support\StylesheetMinifier\Syntax\{Block};
 use LogicException;
+use Support\StylesheetMinifier\Assembler;
+use Support\StylesheetMinifier\Parser;
+use Support\StylesheetMinifier\Syntax\Rule;
+use Support\StylesheetMinifier\Syntax\Statement;
 use function String\hashKey;
 
 /**

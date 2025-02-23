@@ -2,7 +2,10 @@ parameters:
 	level: 6
 	paths:
 		- src
-
+	treatPhpDocTypesAsCertain: false
+	reportUnmatchedIgnoredErrors: false
+	tips:
+		treatPhpDocTypesAsCertain: false
 	ignoreErrors:
 		-
 			message: '#Access to an undefined static property .+::\$service#'

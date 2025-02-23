@@ -9,7 +9,7 @@
  * @link https://github.com/tedious/JShrink JShrink Github
  */
 
-namespace Support\Minify\JavaScriptMinifier;
+namespace Support\JavaScriptMinifier;
 
 use RuntimeException;
 

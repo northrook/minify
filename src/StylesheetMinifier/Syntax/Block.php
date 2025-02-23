@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Support\Minify\StylesheetMinifier\Syntax;
+namespace Support\StylesheetMinifier\Syntax;
 
 use Core\Interface\DataInterface;
 
