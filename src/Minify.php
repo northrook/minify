@@ -70,6 +70,7 @@ abstract class Minify implements Stringable
             'string'  => $this->buffer,
             'report'  => \serialize( $this->getReport() ),
         ];
+
         $this->setCache( $this->key, $result, $deferCache );
 
         $this->result = new Result( ...$result );
@@ -176,7 +177,12 @@ abstract class Minify implements Stringable
         return $this->buffer;
     }
 
-    public function getResult() : Result
+    final public function getOutput() : string
+    {
+        return $this->result->string;
+    }
+
+    final public function getResult() : Result
     {
         return $this->result;
     }

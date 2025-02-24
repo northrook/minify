@@ -20,11 +20,11 @@ final readonly class Result implements DataInterface, Stringable
     public Report $report;
 
     public function __construct(
-        public string $key,
-        public string $hash,
-        public string $version,
-        public string $string,
-        Report|string $report,
+        public ?string $key,
+        public string  $hash,
+        public string  $version,
+        public string  $string,
+        Report|string  $report,
     ) {
         $this->report    = $report instanceof Report ? $report : \unserialize( $report );
         $this->timestamp = $this->report->timestamp;
