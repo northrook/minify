@@ -38,6 +38,7 @@ abstract class Minify implements Stringable
         ?CacheItemPoolInterface             $cachePool = null,
         protected readonly ?LoggerInterface $logger = null,
     ) {
+        $this->setCacheAdapter( $cachePool, 'minify' );
         $this->status = new Status();
         $this->cache  = $cachePool ?? [];
     }
