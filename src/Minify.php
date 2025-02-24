@@ -71,7 +71,9 @@ abstract class Minify implements Stringable
             'report'  => \serialize( $this->getReport() ),
         ];
 
-        $this->setCache( $this->key, $result, $deferCache );
+        if ( $this->key ) {
+            $this->setCache( $this->key, $result, $deferCache );
+        }
 
         $this->result = new Result( ...$result );
         unset( $this->buffer );
