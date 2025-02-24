@@ -28,7 +28,7 @@ final readonly class Report implements DataInterface
 
     public float $diffPercent;
 
-    public function __construct( public string $key, public string $generator, Status $status )
+    public function __construct( public ?string $key, public string $generator, Status $status )
     {
         $this->timestamp   = $status->timestamp;
         $this->timeElapsed = $status->getElapsedTime();
@@ -42,11 +42,13 @@ final readonly class Report implements DataInterface
         $diffKB     = $originalKb - $minifiedKb;
 
         $report = [
-            "{$this->generator} reduced {$this->key} by {$this->diffPercent}%.",
+            "{$this->generator} reduced",
+            $this->key,
+            "by {$this->diffPercent}%.",
             "{$originalKb}KB to {$minifiedKb}KB, saving {$diffKB}KB.",
             "Taking {$this->timeElapsed} to complete.",
         ];
 
-        $this->string = \trim( \implode( ' ', $report ), " \n\r\t\v\0." ).'.';
+        $this->string = \trim( \implode( ' ', \array_filter( $report ) ), " \n\r\t\v\0." ).'.';
     }
 }
