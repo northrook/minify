@@ -40,7 +40,6 @@ abstract class Minify implements Stringable
     ) {
         $this->setCacheAdapter( $cachePool, 'minify' );
         $this->status = new Status();
-        $this->cache  = $cachePool ?? [];
     }
 
     final public function minify( ?string $key = null, bool $deferCache = false ) : self

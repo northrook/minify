@@ -10,6 +10,9 @@
 /vendor/
 /composer.phar
 
+## Dev
+/src/JavaScriptMinifier/Minifier.php
+
 # Build data
 .env
 *.lock
