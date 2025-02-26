@@ -55,6 +55,18 @@ final class StylesheetMinifier extends Minify
 
     protected function process() : void
     {
+        foreach ( $this->source as $index => $source ) {
+            if ( \file_exists( $source ) ) {
+                $source = \file_get_contents( $source );
+            }
+
+            if ( ! $this->rawStyleString( $source ) ) {
+                $this->logger?->notice( 'Source {source} was skipped; either file not fond or empty.', ['source' => $source] );
+            }
+
+            $this->source[$index] = normalizeNewline( $source );
+        }
+
         $this->status->setSourceBytes( ...$this->source );
 
         // Initialize the compiler from provided $sources
