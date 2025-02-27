@@ -62,7 +62,7 @@ final class JavaScriptMinifier extends Minify
 
                 if ( $importPath = $this->importPath( $string, $basePath ) ) {
                     $autoKey .= $importPath;
-                    $version .= $importPath->getMTime();
+                    $version .= \filemtime( $importPath );
                     $this->source[$line] = $importPath;
                 }
             }
@@ -196,8 +196,8 @@ final class JavaScriptMinifier extends Minify
         }
 
         foreach ( $this->source as $index => $source ) {
-            if ( $source instanceof SplFileInfo ) {
-                $source = \file_get_contents( $source->getPathname() );
+            if ( \file_exists( $source ) ) {
+                $source = \file_get_contents( $source );
             }
 
             $this->source[$index] = normalizeNewline( $source );
@@ -208,9 +208,9 @@ final class JavaScriptMinifier extends Minify
      * @param string $string
      * @param string $basePath
      *
-     * @return false|SplFileInfo
+     * @return false|string
      */
-    private function importPath( string $string, string $basePath ) : SplFileInfo|false
+    private function importPath( string $string, string $basePath ) : false|string
     {
         // Trim import statement, quotes and whitespace, and slashes
         $fileName = \trim( \substr( $string, \strlen( 'import ' ) ), " \n\r\t\v\0'\"/\\" );
@@ -219,12 +219,12 @@ final class JavaScriptMinifier extends Minify
             $fileName .= '.js';
         }
 
+        $importPath = "{$basePath}/{$fileName}";
+
         // TODO: Handle relative paths
         // TODO: Handle URL imports
 
-        $filePath = new SplFileInfo( "{$basePath}/{$fileName}" );
-
-        return $filePath->isFile() ? $filePath : false;
+        return \file_exists( $importPath ) ? $importPath : false;
     }
 
     /**

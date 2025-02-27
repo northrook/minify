@@ -56,6 +56,9 @@ abstract class Minify implements Stringable
 
                 return $this;
             }
+
+            // Indicate the cache was not used
+            $this->useCache = false;
         }
 
         // ..  Skip if `$key` and `$hash` matches a cached result
