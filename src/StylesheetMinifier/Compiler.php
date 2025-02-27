@@ -7,11 +7,8 @@ namespace Support\StylesheetMinifier;
 use Psr\Log\LoggerInterface;
 use Support\StylesheetMinifier\Syntax\{Block};
 use LogicException;
-use Support\StylesheetMinifier\Assembler;
-use Support\StylesheetMinifier\Parser;
-use Support\StylesheetMinifier\Syntax\Rule;
-use Support\StylesheetMinifier\Syntax\Statement;
-use function String\hashKey;
+use Support\StylesheetMinifier\Syntax\{Rule, Statement};
+use function Support\hashKey;
 
 /**
  * @internal
