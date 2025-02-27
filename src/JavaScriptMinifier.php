@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Support;
 
 use Core\Exception\{NotSupportedException, RegexpException};
-use SplFileInfo, LogicException;
+use LogicException;
 
 final class JavaScriptMinifier extends Minify
 {
     /**
-     * @var array<array-key, SplFileInfo|string>|string
+     * @var array<array-key, string>|string
      */
     protected string|array $source = PLACEHOLDER_STRING;
 
