@@ -8,7 +8,7 @@ use Psr\Log\LoggerInterface;
 use Support\StylesheetMinifier\Syntax\{Block};
 use LogicException;
 use Support\StylesheetMinifier\Syntax\{Rule, Statement};
-use function Support\hashKey;
+use function Support\{hashKey, normalizeNewline};
 
 /**
  * @internal
@@ -492,16 +492,16 @@ final class Compiler
     }
 
     /**
-     * @param string[] $source
-     * @param ?bool    $logResults
+     * @param string $source
      *
      * @return string
      */
-    public static function minify( string|array $source, ?bool $logResults = null ) : string
+    public static function minify( string $source ) : string
     {
         if ( \trim( $source ) === '' ) {
             return $source;
         }
+
         return (string) \preg_replace(
             [
                 // Remove comment(s)
@@ -525,6 +525,8 @@ final class Compiler
                 '#(?<=[\{;])(border|outline):none(?=[;\}\!])#',
                 // Remove empty selector(s)
                 '#(\/\*(?>.*?\*\/))|(^|[\{\}])(?:[^\s\{\}]+)\{\}#s',
+                // Remove remaining repeated white-space
+                "#\s+#",
             ],
             [
                 '$1',
@@ -538,8 +540,9 @@ final class Compiler
                 '$1$2$3',
                 '$1:0',
                 '$1$2',
+                ' ',
             ],
-            $source,
+            normalizeNewline( $source ),
         );
     }
 }
