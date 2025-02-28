@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Support\Minify;
 
-use DateTimeImmutable;
-use LogicException;
-use function Support\timestamp;
+use DateTimeImmutable, LogicException;
+
+use function Support\datetime;
 
 /**
  * @internal
@@ -55,7 +55,7 @@ final class Status
      */
     public function timer( bool $stop = false ) : self
     {
-        $this->timestamp ??= timestamp();
+        $this->timestamp ??= datetime();
 
         if ( $stop ) {
             if ( ! $this->timer ) {

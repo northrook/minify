@@ -63,13 +63,9 @@ final class Assembler
 
                 continue;
             }
-            // dump( $property, $value );
-
         }
 
         $declaration .= '}';
-
-        // dump( $declarations );
 
         return "{$selector}{$declaration}";
     }
@@ -81,7 +77,6 @@ final class Assembler
         foreach ( $declaration as $selector => $rules ) {
             $merge = \array_search( $rules, $merged, true );
 
-            // dump( $selector );
             if ( $merge ) {
                 $combined = "{$merge}, {$selector}";
                 $merged   = Arr::replaceKey( $merged, $merge, $combined );
