@@ -38,12 +38,15 @@ abstract class Minify implements Stringable
         ?CacheItemPoolInterface             $cachePool = null,
         protected readonly ?LoggerInterface $logger = null,
     ) {
-        $this->setCacheAdapter( $cachePool, 'minify' );
+        $this->assignCacheAdapter( $cachePool, 'minify' );
         $this->status = new Status();
     }
 
-    final public function minify( ?string $key = null, bool $deferCache = false ) : self
-    {
+    final public function minify(
+        ?string $key = null,
+        ?int    $cacheExpiration = AUTO,
+        ?bool   $deferCache = AUTO,
+    ) : self {
         if ( $this->preflight( $key ) ) {
             return $this;
         }
@@ -75,7 +78,7 @@ abstract class Minify implements Stringable
         ];
 
         if ( $this->key ) {
-            $this->setCache( $this->key, $result, $deferCache );
+            $this->setCache( $this->key, $result, $cacheExpiration, $deferCache );
         }
 
         $this->result = new Result( ...$result );

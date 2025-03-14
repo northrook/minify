@@ -61,7 +61,10 @@ final class StylesheetMinifier extends Minify
             }
 
             if ( ! $this->rawStyleString( $source ) ) {
-                $this->logger?->notice( 'Source {source} was skipped; either file not fond or empty.', ['source' => $source] );
+                $this->logger?->notice(
+                    'Source {source} was skipped; either file not fond or empty.',
+                    ['source' => $source],
+                );
             }
 
             $this->source[$index] = normalizeNewline( $source );
