@@ -6,7 +6,7 @@ namespace Support\Minify;
 
 use Core\Interface\DataInterface;
 use DateTimeImmutable;
-use Support\Num;
+use function Support\{num_byte_size, num_percent};
 
 /**
  * @internal
@@ -35,10 +35,10 @@ final readonly class Report implements DataInterface
 
         [$this->sizeOriginal, $this->sizeMinified] = $status->getBytes();
         $this->sizeDiff                            = $this->sizeOriginal - $this->sizeMinified;
-        $this->diffPercent                         = Num::percentDifference( $this->sizeOriginal, $this->sizeMinified );
+        $this->diffPercent                         = num_percent( $this->sizeOriginal, $this->sizeMinified );
 
-        $originalKb = (float) Num::byteSize( $this->sizeOriginal );
-        $minifiedKb = (float) Num::byteSize( $this->sizeMinified );
+        $originalKb = (float) num_byte_size( $this->sizeOriginal );
+        $minifiedKb = (float) num_byte_size( $this->sizeMinified );
         $diffKB     = $originalKb - $minifiedKb;
 
         $report = [

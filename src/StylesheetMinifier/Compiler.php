@@ -8,7 +8,7 @@ use Psr\Log\LoggerInterface;
 use Support\StylesheetMinifier\Syntax\{Block};
 use LogicException;
 use Support\StylesheetMinifier\Syntax\{Rule, Statement};
-use function Support\{hashKey, normalizeNewline};
+use function Support\{key_hash, normalizeNewline};
 
 /**
  * @internal
@@ -466,7 +466,7 @@ final class Compiler
 
             if ( \count( $selectors ) > 1 ) {
                 \sort( $selectors );
-                $hashed = hashKey( $selectors );
+                $hashed = key_hash( 'xxh32', $selectors );
 
                 $duplicateSelector = $duplicates[$hashed] ?? false;
 
