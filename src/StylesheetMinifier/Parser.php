@@ -32,6 +32,9 @@ final class Parser
         }
     }
 
+    /**
+     * @return Block[]|Rule[]|Statement[]
+     */
     public function rules() : array
     {
         return $this->rules;

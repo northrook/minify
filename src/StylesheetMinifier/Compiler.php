@@ -8,7 +8,7 @@ use Psr\Log\LoggerInterface;
 use Support\StylesheetMinifier\Syntax\{Block};
 use LogicException;
 use Support\StylesheetMinifier\Syntax\{Rule, Statement};
-use function Support\{key_hash, normalizeNewline};
+use function Support\{key_hash, normalize_newline};
 
 /**
  * @internal
@@ -16,21 +16,27 @@ use function Support\{key_hash, normalizeNewline};
  */
 final class Compiler
 {
+    /** @var array<array-key,string> */
     private array $enqueued = [];
 
+    /** @var array<string, Block|Rule|Statement>[] */
     private array $ast = [];
 
-    protected array $rules
-        = [
-            // '@charset' => null,
-            // '@import'  => [],
-            // ':root'    => [],
-        ];
+    protected array $rules = [
+        // '@charset' => null,
+        // '@import'  => [],
+        // ':root'    => [],
+    ];
 
     protected int $lastModified = 0;
 
     public readonly string $css;
 
+    /**
+     * @param string|string[]      $source
+     * @param null|LoggerInterface $logger
+     * @param bool                 $strict
+     */
     public function __construct(
         string|array                      $source = [],
         private readonly ?LoggerInterface $logger = null,
@@ -59,6 +65,11 @@ final class Compiler
         return $this;
     }
 
+    /**
+     * @param Block|Rule $declaration
+     *
+     * @return array<string,string>
+     */
     private function compileDeclaration( Rule|Block $declaration ) : array
     {
         $rules = [];
@@ -93,7 +104,7 @@ final class Compiler
     {
         // dd($this);
         // Loop through each provided sources' compiled AST
-        foreach ( $this->ast as $source => $rules ) {
+        foreach ( $this->ast as $rules ) {
             foreach ( $rules as $selector => $declaration ) {
                 // dump( $declarations );
                 // foreach ( $declarations as $declaration ) {
@@ -121,6 +132,11 @@ final class Compiler
         return $this;
     }
 
+    /**
+     * @param array<string,string> $array
+     *
+     * @return array<string,string>
+     */
     final public function sort( array $array ) : array
     {
         $variables = [];
@@ -207,6 +223,11 @@ final class Compiler
         }
     }
 
+    /**
+     * @param string|string[] $source
+     *
+     * @return self
+     */
     private function ingestSources( string|array $source ) : self
     {
         $source = \is_string( $source ) ? [$source] : $source;
@@ -233,14 +254,14 @@ final class Compiler
      *    ? Is the returned int a weighted relative order, or boolean?
      *    ? Do we need to flip, I assume we do so to deduplicate the array?
      *
-     * @param $a
-     * @param $b
+     * @param string $a
+     * @param string $b
      *
      * @return int
      */
-    private function sortDeclarations( $a, $b ) : int
+    protected function sortDeclarations( string $a, string $b ) : int
     {
-        $sortByList ??= [
+        $sortByList = [
             'content',
             'order',
             'position',
@@ -542,7 +563,7 @@ final class Compiler
                 '$1$2',
                 ' ',
             ],
-            normalizeNewline( $source ),
+            normalize_newline( $source ),
         );
     }
 }

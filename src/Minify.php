@@ -230,6 +230,6 @@ abstract class Minify implements Stringable
 
     final protected function sourceHash( string|Stringable $value ) : string
     {
-        return \hash( algo : 'xxh64', data : normalizeNewline( $value ) );
+        return \hash( algo : 'xxh64', data : normalize_newline( $value ) );
     }
 }

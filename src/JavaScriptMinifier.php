@@ -36,7 +36,7 @@ final class JavaScriptMinifier extends Minify
 
         $isFile = \file_exists( $this->source );
 
-        if ( $isFile || isUrl( $this->source ) ) {
+        if ( $isFile || is_url( $this->source ) ) {
             $autoKey .= $this->source;
             $version .= \filemtime( $this->source );
         }
@@ -50,7 +50,7 @@ final class JavaScriptMinifier extends Minify
             }
 
             $basePath = \pathinfo( $this->source, PATHINFO_DIRNAME );
-            $source   = normalizeNewline( \file_get_contents( $this->source ) );
+            $source   = normalize_newline( \file_get_contents( $this->source ) );
 
             $importCount  = \substr_count( $source, 'import ' ) + 1;
             $this->source = \explode( NEWLINE, $source, $importCount );
@@ -68,10 +68,10 @@ final class JavaScriptMinifier extends Minify
             }
         }
         elseif ( $isFile ) {
-            $this->source = normalizeNewline( \file_get_contents( $this->source ) );
+            $this->source = normalize_newline( \file_get_contents( $this->source ) );
         }
         else {
-            $this->source = normalizeNewline( $this->source );
+            $this->source = normalize_newline( $this->source );
         }
 
         if ( ! ( $key ?? $autoKey ) ) {
@@ -200,7 +200,7 @@ final class JavaScriptMinifier extends Minify
                 $source = \file_get_contents( $source );
             }
 
-            $this->source[$index] = normalizeNewline( $source );
+            $this->source[$index] = normalize_newline( $source );
         }
     }
 

@@ -67,7 +67,7 @@ final class StylesheetMinifier extends Minify
                 );
             }
 
-            $this->source[$index] = normalizeNewline( $source );
+            $this->source[$index] = normalize_newline( $source );
         }
 
         $this->status->setSourceBytes( ...$this->source );
