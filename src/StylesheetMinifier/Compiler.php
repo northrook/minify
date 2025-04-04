@@ -530,13 +530,13 @@ final class Compiler
                 // Remove unused white-space(s)
                 '#("(?:[^"\\\]++|\\\.)*+"|\'(?:[^\'\\\\]++|\\\.)*+\'|\/\*(?>.*?\*\/))|\s*+;\s*+(})\s*+|\s*+([*$~^|]?+=|[{};,>~]|\s(?![0-9\.])|!important\b)\s*+|([[(:])\s++|\s++([])])|\s++(:)\s*+(?!(?>[^{}"\']++|"(?:[^"\\\]++|\\\.)*+"|\'(?:[^\'\\\\]++|\\\.)*+\')*+{)|^\s++|\s++\z|(\s)\s+#si',
                 // Replace `0(cm|em|ex|in|mm|pc|pt|px|vh|vw|%)` with `0`
-                '#(?<=[\s:])(0)(cm|em|ex|in|mm|pc|pt|px|vh|vw|%)#si',
+                '#(?<=[\s:])(0)(cm|em|ex|in|mm|pc|pt|px|vh|vw|%)#i',
                 // Replace `:0 0 0 0` with `:0`
                 '#:(0\s+0|0\s+0\s+0\s+0)(?=[;\}]|\!important)#i',
                 // Replace `background-position:0` with `background-position:0 0`
-                '#(background-position):0(?=[;\}])#si',
+                '#(background-position):0(?=[;\}])#i',
                 // Replace `0.6` with `.6`, but only when preceded by `:`, `,`, `-` or a white-space
-                '#(?<=[\s:,\-])0+\.(\d+)#s',
+                '#(?<=[\s:,\-])0+\.(\d+)#',
                 // Minify string value
                 '#(\/\*(?>.*?\*\/))|(?<!content\:)([\'"])([a-z_][a-z0-9\-_]*?)\2(?=[\s\{\}\];,])#si',
                 '#(\/\*(?>.*?\*\/))|(\burl\()([\'"])([^\s]+?)\3(\))#si',

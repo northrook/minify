@@ -77,7 +77,7 @@ final class Parser
         }
     }
 
-    final protected function next( ?string $is = null )
+    final protected function next( ?string $is = null ) : bool|int
     {
         $next = [
             'at'    => $this->match( '@' ),
@@ -109,7 +109,7 @@ final class Parser
 
     final protected function extractRuleGroup() : false|string
     {
-        \preg_match( '/[^{]+\s*\{(?:[^{}]*|(?R))*}/s', $this->css, $extract );
+        \preg_match( '#[^{]+\s*\{(?:[^{}]*|(?R))*}#', $this->css, $extract );
 
         if ( ! $extract ) {
             $this->running = false;
@@ -128,7 +128,7 @@ final class Parser
         return $rule;
     }
 
-    private function validateCssString( ?string $string = null ) : void
+    protected function validateCssString( ?string $string = null ) : void
     {
         if (
             \substr_count( $string ?? $this->css, '{' )
@@ -138,12 +138,12 @@ final class Parser
         }
     }
 
-    private function depth( string $string ) : int
-    {
-        $openBrackets = \substr_count( $string, '{' );
-        if ( \substr_count( $string, '}' ) !== $openBrackets ) {
-            throw new LogicException( 'Provided CSS does has an uneven block distribution.' );
-        }
-        return $openBrackets;
-    }
+    // private function depth( string $string ) : int
+    // {
+    //     $openBrackets = \substr_count( $string, '{' );
+    //     if ( \substr_count( $string, '}' ) !== $openBrackets ) {
+    //         throw new LogicException( 'Provided CSS has uneven block distribution.' );
+    //     }
+    //     return $openBrackets;
+    // }
 }

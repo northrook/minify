@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Support;
 
-use Core\Exception\{RegexpException};
+use Core\Exception\RegexpException;
 use LogicException;
 
 final class JavaScriptMinifier extends Minify
