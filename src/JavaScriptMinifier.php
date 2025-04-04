@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Support;
 
-use Core\Exception\{NotSupportedException, RegexpException};
+use Core\Exception\{RegexpException};
 use LogicException;
 
 final class JavaScriptMinifier extends Minify
@@ -44,11 +44,11 @@ final class JavaScriptMinifier extends Minify
             $version .= $this->sourceHash( $this->source );
         }
 
-        if ( $this->bundleImportStatements ) {
-            if ( ! $isFile ) {
-                throw new NotSupportedException( 'Imports only supported for local files.' );
-            }
+        if ( ! $isFile ) {
+            $this->bundleImportStatements = false;
+        }
 
+        if ( $this->bundleImportStatements ) {
             $basePath = \pathinfo( $this->source, PATHINFO_DIRNAME );
             $source   = normalize_newline( \file_get_contents( $this->source ) );
 
