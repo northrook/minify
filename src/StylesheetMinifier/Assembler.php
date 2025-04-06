@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Support\StylesheetMinifier;
 
-use Support\Arr;
+use function Support\arr_replace_key;
 
 /**
  * @internal
@@ -79,7 +79,7 @@ final class Assembler
 
             if ( $merge ) {
                 $combined = "{$merge}, {$selector}";
-                $merged   = Arr::replaceKey( $merged, $merge, $combined );
+                $merged   = arr_replace_key( $merged, $merge, $combined );
 
                 unset( $merged[$selector] ); // ! unset current key
             }
