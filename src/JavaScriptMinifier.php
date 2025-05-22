@@ -138,7 +138,7 @@ final class JavaScriptMinifier extends Minify
 
     protected function handleWhitespace() : self
     {
-        // reduce consecutive newlines to single one
+        // reduce consecutive newlines to a single one
         $this->buffer = \preg_replace(
             pattern     : '~[\\n]+~',
             replacement : NEWLINE,
@@ -212,7 +212,7 @@ final class JavaScriptMinifier extends Minify
      */
     private function importPath( string $string, string $basePath ) : false|string
     {
-        // Trim import statement, quotes and whitespace, and slashes
+        // Trim import statements, quotes and whitespace, and slashes
         $fileName = \trim( \substr( $string, \strlen( 'import ' ) ), " \n\r\t\v\0'\"/\\" );
 
         if ( ! \str_ends_with( $fileName, '.js' ) ) {

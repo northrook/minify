@@ -4,19 +4,22 @@ declare(strict_types=1);
 
 namespace Support;
 
+use Cache\CacheHandler;
+use Core\Interface\{LogHandler, Loggable};
 use Psr\Log\LoggerInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use Cache\CachePoolTrait;
 use Support\Minify\{Report, Result, Status};
 use Stringable, LogicException;
 
-abstract class Minify implements Stringable
+abstract class Minify implements Stringable, Loggable
 {
-    use CachePoolTrait;
+    use LogHandler;
 
     private readonly Result $result;
 
     private readonly Report $report;
+
+    protected readonly CacheHandler $cache;
 
     protected readonly Status $status;
 
@@ -38,7 +41,12 @@ abstract class Minify implements Stringable
         ?CacheItemPoolInterface             $cachePool = null,
         protected readonly ?LoggerInterface $logger = null,
     ) {
-        $this->assignCacheAdapter( $cachePool, 'minify' );
+        $this->setLogger( $logger );
+        $this->cache = new CacheHandler(
+            adapter : $cachePool,
+            prefix  : 'minify',
+            logger  : $logger,
+        );
         $this->status = new Status();
     }
 
@@ -52,7 +60,7 @@ abstract class Minify implements Stringable
         }
 
         if ( $this->useCache ) {
-            $cached = $this->getCache( $this->key );
+            $cached = $this->cache->get( $this->key );
 
             if ( $cached && ( $this->hash === $cached['hash'] ) ) {
                 $this->result = new Result( ...$cached );
@@ -64,7 +72,7 @@ abstract class Minify implements Stringable
             $this->useCache = false;
         }
 
-        // ..  Skip if `$key` and `$hash` matches a cached result
+        // ..  Skip if `$key` and `$hash` match a cached result
         $this->process();
 
         $this->status->timer( true );
@@ -78,7 +86,7 @@ abstract class Minify implements Stringable
         ];
 
         if ( $this->key ) {
-            $this->setCache( $this->key, $result, $cacheExpiration, $deferCache );
+            $this->cache->set( $this->key, $result, $cacheExpiration, $deferCache );
         }
 
         $this->result = new Result( ...$result );
@@ -101,7 +109,7 @@ abstract class Minify implements Stringable
 
         [$this->key, $this->hash] = $this->prepare( $key );
 
-        $this->useCache = $this->hasCache( $this->key );
+        $this->useCache = $this->cache->has( $this->key );
         $this->locked   = true;
 
         return false;
