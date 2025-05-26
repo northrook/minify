@@ -38,8 +38,8 @@ abstract class Minify implements Stringable, Loggable
      * @param null|LoggerInterface        $logger
      */
     final public function __construct(
-        ?CacheItemPoolInterface             $cachePool = null,
-        protected readonly ?LoggerInterface $logger = null,
+        ?CacheItemPoolInterface $cachePool = null,
+        ?LoggerInterface        $logger = null,
     ) {
         $this->setLogger( $logger );
         $this->cache = new CacheHandler(
