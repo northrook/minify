@@ -20,13 +20,13 @@
     "php": ">=8.3",
     "ext-dom": "*",
     "ext-curl": "*",
-    "northrook/support": "dev-main",
+    "northrook/core": "dev-main",
+    "northrook/pathfinder": "dev-main",
+    "northrook/php-curl": "dev-main",
     "northrook/cache": "dev-main"
   },
   "require-dev": {
-    "northrook/dev": "dev-main",
-    "northrook/logger": "dev-main",
-    "symfony/cache": "^7.2"
+    "northrook/dev": "dev-main"
   },
   "scripts": {
     "phpstan": "vendor/bin/phpstan analyse"

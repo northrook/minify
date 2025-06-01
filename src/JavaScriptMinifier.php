@@ -9,106 +9,20 @@ use LogicException;
 
 final class JavaScriptMinifier extends Minify
 {
-    /**
-     * @var array<array-key, string>|string
-     */
-    protected string|array $source = PLACEHOLDER_STRING;
-
-    protected bool $bundleImportStatements = false;
-
     /** @var string[] */
     protected array $comments = [];
 
-    public function bundleImportStatements( bool $set = true ) : self
+    protected function process() : string
     {
-        if ( $this->locked ) {
-            throw new LogicException( 'The minifier is locked.' );
-        }
-        $this->bundleImportStatements = $set;
+        $this->buffer = \implode( NEWLINE, $this->process );
 
-        return $this;
-    }
-
-    protected function prepare( ?string $key ) : array
-    {
-        $autoKey = '';
-        $version = '';
-
-        $isFile = \file_exists( $this->source );
-
-        if ( $isFile || is_url( $this->source ) ) {
-            $autoKey .= $this->source;
-            $version .= \filemtime( $this->source );
-        }
-        else {
-            $version .= $this->sourceHash( $this->source );
-        }
-
-        if ( ! $isFile ) {
-            $this->bundleImportStatements = false;
-        }
-
-        if ( $this->bundleImportStatements ) {
-            $basePath = \pathinfo( $this->source, PATHINFO_DIRNAME );
-            $source   = normalize_newline( \file_get_contents( $this->source ) );
-
-            $importCount  = \substr_count( $source, 'import ' ) + 1;
-            $this->source = \explode( NEWLINE, $source, $importCount );
-
-            foreach ( $this->source as $line => $string ) {
-                if ( ! \str_starts_with( $string, 'import ' ) ) {
-                    continue;
-                }
-
-                if ( $importPath = $this->importPath( $string, $basePath ) ) {
-                    $autoKey .= $importPath;
-                    $version .= \filemtime( $importPath );
-                    $this->source[$line] = $importPath;
-                }
-            }
-        }
-        elseif ( $isFile ) {
-            $this->source = normalize_newline( \file_get_contents( $this->source ) );
-        }
-        else {
-            $this->source = normalize_newline( $this->source );
-        }
-
-        if ( ! ( $key ?? $autoKey ) ) {
-            $this->logger?->warning(
-                '{class}: No key set or derived from sources. Results will not be cached.',
-                ['class' => $this::class],
-            );
-            return [
-                null,
-                $this->sourceHash( $version ),
-            ];
-        }
-
-        return [
-            $key ?? $this->sourceHash( $autoKey ),
-            $this->sourceHash( $version ),
-        ];
-    }
-
-    protected function process() : void
-    {
-        if ( $this->bundleImportStatements ) {
-            $this->handleImportStatements();
-            $this->buffer = \implode( NEWLINE, $this->source );
-        }
-        else {
-            $this->buffer = $this->source;
-        }
-
-        $this->status->setSourceBytes( $this->buffer );
-
-        $this->parse();
-
+        $this
+            ->removeComments()
+            ->handleWhitespace();
+        //
         // [JShrink]
         // $this->buffer = JavaScriptMinifier\Minifier::minify( $this->buffer );
-
-        $this->status->setMinifiedBytes( $this->buffer );
+        return $this->buffer;
     }
 
     protected function parse() : void
@@ -116,9 +30,6 @@ final class JavaScriptMinifier extends Minify
         if ( ! $this->buffer ) {
             throw new LogicException( "The buffer is empty.\Run minify() first." );
         }
-
-        $this->removeComments()
-            ->handleWhitespace();
     }
 
     protected function removeComments() : self
@@ -187,44 +98,6 @@ final class JavaScriptMinifier extends Minify
         $this->buffer = \implode( NEWLINE, \array_filter( $lines ) );
         $this->buffer = \trim( \str_replace( ["\t"], '  ', $this->buffer ) );
         return $this;
-    }
-
-    private function handleImportStatements() : void
-    {
-        if ( ! \is_array( $this->source ) ) {
-            throw new LogicException( 'Imports were not handled.' );
-        }
-
-        foreach ( $this->source as $index => $source ) {
-            if ( \file_exists( $source ) ) {
-                $source = \file_get_contents( $source );
-            }
-
-            $this->source[$index] = normalize_newline( $source );
-        }
-    }
-
-    /**
-     * @param string $string
-     * @param string $basePath
-     *
-     * @return false|string
-     */
-    private function importPath( string $string, string $basePath ) : false|string
-    {
-        // Trim import statements, quotes and whitespace, and slashes
-        $fileName = \trim( \substr( $string, \strlen( 'import ' ) ), " \n\r\t\v\0'\"/\\" );
-
-        if ( ! \str_ends_with( $fileName, '.js' ) ) {
-            $fileName .= '.js';
-        }
-
-        $importPath = "{$basePath}/{$fileName}";
-
-        // TODO: Handle relative paths
-        // TODO: Handle URL imports
-
-        return \file_exists( $importPath ) ? $importPath : false;
     }
 
     /**

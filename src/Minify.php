@@ -5,129 +5,95 @@ declare(strict_types=1);
 namespace Support;
 
 use Cache\CacheHandler;
-use Core\Interface\{LogHandler, Loggable};
+use Core\Exception\InvalidStateException;
+use Core\Interface\ProfilerInterface;
+use Core\Autowire\{Logger};
+use Core\Profiler;
 use Psr\Log\LoggerInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use Support\Minify\{Report, Result, Status};
 use Stringable, LogicException;
+use Support\Minify\Exception\SourceNotFoundException;
+use Support\Minify\{Output, Source};
+use Support\Minify\Source\Type;
+use Symfony\Component\Stopwatch\Stopwatch;
 
-abstract class Minify implements Stringable, Loggable
+/**
+ * @internal
+ *
+ * @used-by JavaScriptMinifier, StylesheetMinifier
+ */
+abstract class Minify implements Stringable
 {
-    use LogHandler;
+    use Logger;
 
-    private readonly Result $result;
+    private readonly Output $output;
 
-    private readonly Report $report;
+    // private readonly Report $report;
+
+    // private readonly Status $status;
 
     protected readonly CacheHandler $cache;
 
-    protected readonly Status $status;
+    protected readonly ProfilerInterface $profiler;
+
+    protected bool $bundleImports = false;
 
     protected bool $locked = false;
 
     protected ?string $key;
 
-    protected ?string $hash = null;
+    protected ?int $fingerprint = null;
 
     protected bool $useCache;
+
+    /** @var array<array-key, string> */
+    protected array $source = [];
+
+    /** @var array<string, Source> */
+    protected array $sources = [];
+
+    /** @var array<string, string> */
+    protected array $process = [];
+
+    /** @var string[] */
+    protected array $comments = [];
 
     protected string $buffer = PLACEHOLDER_STRING;
 
     /**
-     * @param null|CacheItemPoolInterface $cachePool
-     * @param null|LoggerInterface        $logger
+     * @param null|CacheItemPoolInterface           $cachePool
+     * @param null|LoggerInterface                  $logger
+     * @param null|bool|ProfilerInterface|Stopwatch $profiler
      */
     final public function __construct(
-        ?CacheItemPoolInterface $cachePool = null,
-        ?LoggerInterface        $logger = null,
+        ?CacheItemPoolInterface               $cachePool = null,
+        ?LoggerInterface                      $logger = null,
+        null|bool|Stopwatch|ProfilerInterface $profiler = null,
     ) {
-        $this->setLogger( $logger );
+        $this->setLogger( $logger, true );
         $this->cache = new CacheHandler(
             adapter : $cachePool,
             prefix  : 'minify',
             logger  : $logger,
         );
-        $this->status = new Status();
+        $this->profiler = $profiler instanceof ProfilerInterface
+                ? $profiler
+                : new Profiler( $profiler );
+        $this->profiler->setCategory( $this::class );
+        // $this->status = new Status();
     }
 
-    final public function minify(
-        ?string $key = null,
-        ?int    $cacheExpiration = AUTO,
-        ?bool   $deferCache = AUTO,
-    ) : self {
-        if ( $this->preflight( $key ) ) {
-            return $this;
-        }
+    final public function bundleImports( bool $set = true ) : self
+    {
+        $this->validateLockState();
 
-        if ( $this->useCache ) {
-            $cached = $this->cache->get( $this->key );
+        $this->bundleImports = $set;
 
-            if ( $cached && ( $this->hash === $cached['hash'] ) ) {
-                $this->result = new Result( ...$cached );
-
-                return $this;
-            }
-
-            // Indicate the cache was not used
-            $this->useCache = false;
-        }
-
-        // ..  Skip if `$key` and `$hash` match a cached result
-        $this->process();
-
-        $this->status->timer( true );
-
-        $result = [
-            'key'     => $this->key,
-            'hash'    => $this->hash,
-            'version' => \hash( 'xxh32', $this->hash ),
-            'string'  => $this->buffer,
-            'report'  => \serialize( $this->getReport() ),
-        ];
-
-        if ( $this->key ) {
-            $this->cache->set( $this->key, $result, $cacheExpiration, $deferCache );
-        }
-
-        $this->result = new Result( ...$result );
-        unset( $this->buffer );
         return $this;
     }
 
     /**
-     * @param null|string $key from {@see self::minify()}
-     *
-     * @return bool
-     */
-    final protected function preflight( ?string $key ) : bool
-    {
-        if ( $this->locked ) {
-            return true;
-        }
-
-        $this->status->timer();
-
-        [$this->key, $this->hash] = $this->prepare( $key );
-
-        $this->useCache = $this->cache->has( $this->key );
-        $this->locked   = true;
-
-        return false;
-    }
-
-    /**
-     * Parses and prepares provided `$source`.
-     *
-     * @param ?string $key
-     *
-     * @return array{0: ?string, 1: string} `key,hash`
-     */
-    abstract protected function prepare( ?string $key ) : array;
-
-    abstract protected function process() : void;
-
-    /**
-     * Assign a source value.
+     * Add one or more sources.
      *
      * @param string|Stringable ...$source
      *
@@ -135,37 +101,207 @@ abstract class Minify implements Stringable, Loggable
      */
     final public function setSource( string|Stringable ...$source ) : static
     {
-        if ( $this->locked ) {
-            throw new LogicException( $this::class.' has been locked by the compile proccess.' );
-        }
+        $this->validateLockState();
 
-        if ( ! \property_exists( $this, 'source' ) ) {
-            throw new LogicException( 'The source property is not defined.' );
-        }
-
-        if ( \is_string( $this->source ) ) {
-            $this->source = (string) \current( $source );
-        }
-        elseif ( \is_array( $this->source ) ) {
-            foreach ( $source as $value ) {
+        foreach ( $source as $key => $value ) {
+            if ( \is_int( $key ) ) {
                 $key = $value instanceof Stringable
                         ? class_id( $value, true )
-                        : $this->sourceHash( $value );
-
-                // if ( ! isset( $this->source[$key] ) ) {
-                //     unset( $this->source[$key] );
-                // }
-
-                $this->source[$key] ??= (string) $value;
+                        : \hash( algo : 'xxh64', data : $value );
             }
-        }
-        else {
-            $minifier = $this::class;
-            $message  = "The '{$minifier}' source property must be string or array. ";
-            throw new LogicException( $message );
+            if ( \array_key_exists( $key, $this->sources ) ) {
+                $this->log(
+                    message : '{method} The source {key} already exists.',
+                    context : [
+                        'method' => __METHOD__,
+                        'key'    => $key,
+                        'value'  => $value,
+                        'stack'  => \debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ),
+                    ],
+                    level   : 'notice',
+                );
+            }
+
+            $this->source[$key] ??= new Source( $value );
         }
 
         return $this;
+    }
+
+    final public function minify(
+        ?string $key = null,
+        ?int    $cacheExpiration = AUTO,
+        ?bool   $deferCache = AUTO,
+    ) : self {
+        $this->key = $key;
+
+        if ( $this->preflight() ) {
+            return $this;
+        }
+
+        if ( $this->useCachedResult() ) {
+            return $this;
+        }
+
+        $this->loadSources();
+
+        // $this->status->setSourceBytes( ...$this->process );
+        $this->buffer = $this->process();
+        // $this->status->setMinifiedBytes( $this->buffer );
+
+        $this->output = new Output(
+            $this->key,
+            $this->fingerprint,
+            $this->buffer,
+            // $this->getReport(),
+        );
+        unset( $this->buffer );
+
+        // $this->status->timer( true );
+
+        if ( $this->key ) {
+            $this->cache->set( $this->key, $this->output->array(), $cacheExpiration, $deferCache );
+        }
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    private function preflight() : bool
+    {
+        if ( $this->locked ) {
+            return true;
+        }
+
+        $this->locked = true;
+
+        $this->profiler->start( 'preflight' );
+
+        // $this->status->timer();
+
+        foreach ( $this->source as $key => $path ) {
+            $source = new Source( $path );
+
+            if ( $source->exists() ) {
+                // Add it to sources
+                $this->sources[$key] = $source;
+            }
+            else {
+                $this->log( new SourceNotFoundException( $source ) );
+
+                continue;
+            }
+
+            if ( $this->bundleImports ) {
+                foreach ( $source->getImports() as $hash => $import ) {
+                    $this->sources[$hash] = $import;
+                }
+            }
+        }
+
+        $version = [];
+
+        foreach ( $this->sources as $key => $source ) {
+            $lastModified = $source->lastModified();
+
+            if ( $lastModified === false ) {
+                $lastModified = \time();
+                $this->log(
+                    'Unable to get lastModified from source {source}.',
+                    ['source' => $source],
+                    'warning',
+                );
+            }
+
+            $version[$key] = $lastModified;
+        }
+
+        $this->key ??= key_hash( 'xxh64', \array_keys( $this->source ) );
+
+        $this->fingerprint = num_xor( $version ) ?: \max( $version );
+
+        $this->key .= '-'.$this->fingerprint;
+
+        $this->useCache = $this->cache->has( $this->key );
+
+        $this->profiler->stop( 'preflight' );
+
+        return false;
+    }
+
+    private function useCachedResult() : bool
+    {
+        if ( $this->useCache === false ) {
+            return false;
+        }
+
+        $cached = $this->cache->get( $this->key );
+
+        if ( $cached && ( $this->fingerprint === $cached['fingerprint'] ) ) {
+            $this->log(
+                '{method} => {action} cache',
+                [
+                    'method' => __METHOD__,
+                    'action' => 'valid',
+                ],
+                'notice',
+            );
+
+            $this->output = new Output( ...$cached );
+            // $this->report = $this->output->report;
+        }
+        else {
+            $this->log(
+                '{method} => {action} cache',
+                [
+                    'method' => __METHOD__,
+                    'action' => 'invalid',
+                ],
+                'warning',
+            );
+
+            $this->useCache = false;
+        }
+
+        return $this->useCache;
+    }
+
+    private function loadSources() : self
+    {
+        foreach ( $this->sources as $hash => $source ) {
+            $content = null;
+            if ( $source->type === Type::STRING ) {
+                $content = $source->get();
+            }
+            elseif ( $source->type === Type::PATH ) {
+                $content = \file_get_contents( $source->get() );
+            }
+            elseif ( $source->type === Type::URL ) {
+                dump( [__METHOD__ => $source->get()] );
+            }
+
+            if ( ! $content ) {
+                continue;
+            }
+
+            foreach ( $source->importStatements as $statement ) {
+                $content = \str_replace( $statement, '', $content );
+            }
+
+            $this->process[$hash] = $content;
+        }
+
+        return $this;
+    }
+
+    abstract protected function process() : string;
+
+    final protected function sourceHash( string|Stringable $value ) : string
+    {
+        return $value instanceof Stringable
+                ? class_id( $value, true )
+                : \hash( algo : 'xxh64', data : $value );
     }
 
     final public function usedCache() : bool
@@ -176,36 +312,36 @@ abstract class Minify implements Stringable, Loggable
         return $this->useCache;
     }
 
-    final public function getReport() : Report
-    {
-        if ( isset( $this->result, $this->result->report ) ) {
-            return $this->result->report;
-        }
-        return $this->report ??= new Report(
-            $this->key,
-            $this::class,
-            $this->status,
-        );
-    }
+    // final public function getReport() : Report
+    // {
+    //     if ( isset( $this->result, $this->result->report ) ) {
+    //         return $this->result->report;
+    //     }
+    //     return $this->report ??= new Report(
+    //         $this->key,
+    //         $this::class,
+    //         $this->status,
+    //     );
+    // }
 
     public function getBuffer() : string
     {
         return $this->buffer;
     }
 
-    final public function getOutput() : string
+    final public function getString() : string
     {
-        return $this->result->string;
+        return $this->output->string;
     }
 
-    final public function getResult() : Result
+    final public function getOutput() : Output
     {
-        return $this->result;
+        return $this->output;
     }
 
     final public function __toString() : string
     {
-        return $this->result->string;
+        return $this->output->string;
     }
 
     final public static function JS(
@@ -236,8 +372,12 @@ abstract class Minify implements Stringable, Loggable
         return \strtolower( $string );
     }
 
-    final protected function sourceHash( string|Stringable $value ) : string
+    final protected function validateLockState() : void
     {
-        return \hash( algo : 'xxh64', data : normalize_newline( $value ) );
+        if ( $this->locked ) {
+            throw new InvalidStateException(
+                $this::class.' has been locked by the compile proccess.',
+            );
+        }
     }
 }

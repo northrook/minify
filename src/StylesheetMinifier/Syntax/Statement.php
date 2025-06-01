@@ -8,7 +8,7 @@ use Core\Interface\DataInterface;
 use InvalidArgumentException;
 
 /**
- * ```.
+ * ```
  * @ identifier rule;
  * ```
  *

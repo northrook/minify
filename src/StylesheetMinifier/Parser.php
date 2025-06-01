@@ -44,13 +44,13 @@ final class Parser
     {
         $this->iteration++;
 
-        // Stop matching when the CSS is empty, or if the failsafe is reached
+        // Stop matching when the CSS is empty or if the failsafe is reached
         if ( ! $this->css || $this->iteration > $this->failsafe ) {
             $this->running = false;
         }
 
         // If the next match character is closing,
-        // it can only be a statement, or malformed.
+        // it can only be a statement or malformed.
         if ( $this->next( 'end' ) ) {
             $statement                = $this->extract( $this->next() );
             [$selector, $declaration] = \explode( ' ', $statement, 2 );
