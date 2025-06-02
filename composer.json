@@ -26,7 +26,8 @@
     "northrook/cache": "dev-main"
   },
   "require-dev": {
-    "northrook/dev": "dev-main"
+    "northrook/dev": "dev-main",
+    "sabberworm/php-css-parser": "^8.8"
   },
   "scripts": {
     "phpstan": "vendor/bin/phpstan analyse"

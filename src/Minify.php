@@ -159,7 +159,7 @@ abstract class Minify implements Stringable
 
         // $this->status->timer( true );
 
-        if ( $this->key ) {
+        if ( $this->key && $this->fingerprint ) {
             $this->cache->set( $this->key, $this->output->array(), $cacheExpiration, $deferCache );
         }
         return $this;
@@ -219,7 +219,7 @@ abstract class Minify implements Stringable
 
         $this->key ??= key_hash( 'xxh64', \array_keys( $this->source ) );
 
-        $this->fingerprint = num_xor( $version ) ?: \max( $version );
+        $this->fingerprint = $version ? num_xor( $version ) ?: \max( $version ) : null;
 
         $this->key .= '-'.$this->fingerprint;
 

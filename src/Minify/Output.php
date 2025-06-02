@@ -24,7 +24,7 @@ final readonly class Output implements Stringable
 
     public function __construct(
         public ?string $key,
-        public int     $fingerprint,
+        public ?int    $fingerprint,
         public string  $string,
         ?int           $timestamp = null,
     ) {
